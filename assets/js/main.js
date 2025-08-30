@@ -105,8 +105,8 @@ function setupScrollEffects() {
 }
 
 function loadInitialData() {
-    // Load artists data for artists page
-    if (document.querySelector('#artists-list')) {
+    // Load artists data for artists page and featured artist on home page
+    if (document.querySelector('#artists-list') || document.querySelector('#featured-artist-image')) {
         loadArtistsData();
     }
 
@@ -124,6 +124,8 @@ function loadArtistsData() {
         .then(response => response.json())
         .then(data => {
             renderArtists(data.artists);
+            // Also render featured artist on home page
+            renderHomeFeaturedArtist(data.artists);
         })
         .catch(error => {
             console.error('Error loading artists data:', error);
@@ -131,46 +133,110 @@ function loadArtistsData() {
 }
 
 function renderArtists(artists) {
+    console.log('=== renderArtists called with', artists?.length, 'artists ===');
     const featuredArtistElement = document.querySelector('.artist-featured');
-    if (!featuredArtistElement || !artists || artists.length === 0) return;
+    console.log('Featured artist element found:', !!featuredArtistElement);
+
+    if (!featuredArtistElement || !artists || artists.length === 0) {
+        console.log('Early return - no element or no artists');
+        return;
+    }
 
     // Find the featured artist
     const featuredArtist = artists.find(artist => artist.featured) || artists[0];
+    console.log('Featured artist:', featuredArtist.name, 'with', featuredArtist.images?.length, 'images');
 
     // Update the featured artist
     const imageElement = featuredArtistElement.querySelector('.artist-featured-image img');
+    console.log('Image element found:', !!imageElement);
 
     // Find hero image - handle both old and new formats
     let heroImagePath = null;
     if (featuredArtist.images && featuredArtist.images.length > 0) {
+        console.log('Images found in featured artist:', featuredArtist.images);
         // New format with objects
         const heroImageObj = featuredArtist.images.find(img => img.isHero) || featuredArtist.images[0];
+        console.log('Hero image object:', heroImageObj);
         heroImagePath = heroImageObj.path || heroImageObj;
 
+        console.log('Initial hero path:', heroImagePath);
         // Convert thumbnail path to full image path for hero display
         if (heroImagePath.includes('/thumbnails/')) {
             heroImagePath = heroImagePath.replace('/thumbnails/', '/large/');
+            console.log('Converted to large path:', heroImagePath);
         }
+    } else {
+        console.log('No images found in featured artist');
     }
 
     if (imageElement && heroImagePath) {
         // Convert to GitHub URL for public display
         const repoPath = 'enki-verse/enkiverse-website';
-        imageElement.src = `https://raw.githubusercontent.com/${repoPath}/main/${heroImagePath}`;
+        // Decode URL-encoded characters like %20 for spaces
+        const decodedPath = decodeURIComponent(heroImagePath);
+        const finalImageUrl = `https://raw.githubusercontent.com/${repoPath}/main/${decodedPath}`;
+        console.log('Setting image src to:', finalImageUrl);
+        console.log('Decoded path:', decodedPath);
+        console.log('Full URL:', finalImageUrl);
+
+        imageElement.src = finalImageUrl;
         imageElement.alt = featuredArtist.name || 'Artist';
 
         // Show image on load
         imageElement.style.display = 'block';
 
-        // Handle image error (show placeholder if image doesn't exist)
+        // Add error handler with fallback strategies
         imageElement.onerror = function() {
-            this.src = 'assets/images/small white on black ENKIVERSE logo.png';
-            this.alt = 'Default logo';
+            console.log('Image failed to load:', finalImageUrl);
+            // Try alternative GitHub URLs
+            const fallbackUrls = [
+                // Try without main branch
+                `https://raw.githubusercontent.com/${repoPath}/master/${decodedPath}`,
+                // Try with different usercontent domain (sometimes works better)
+                `https://raw.githubusercontentusercontent.com/${repoPath}/main/${decodedPath}`,
+                `https://raw.githubusercontentusercontent.com/${repoPath}/master/${decodedPath}`
+            ];
+
+            console.log('Trying fallback URLs...');
+
+            let fallbackIndex = 0;
+            function tryNextFallback() {
+                if (fallbackIndex >= fallbackUrls.length) {
+                    // All fallbacks failed, use default
+                    console.log('All fallbacks failed, using default');
+                    imageElement.src = 'assets/images/small white on black ENKIVERSE logo.png';
+                    imageElement.alt = 'Default logo';
+                    return;
+                }
+
+                const fallbackUrl = fallbackUrls[fallbackIndex++];
+                console.log('Trying fallback:', fallbackUrl);
+
+                const testImg = new Image();
+                testImg.onload = function() {
+                    console.log('Fallback worked:', fallbackUrl);
+                    imageElement.src = fallbackUrl;
+                };
+                testImg.onerror = tryNextFallback;
+                testImg.src = fallbackUrl;
+            }
+
+            tryNextFallback();
         };
-    } else if (imageElement) {
-        // No images, show default
-        imageElement.src = 'assets/images/small white on black ENKIVERSE logo.png';
-        imageElement.alt = 'Default logo';
+
+        // Add success handler
+        imageElement.onload = function() {
+            console.log('Image loaded successfully:', finalImageUrl);
+        };
+
+        console.log('Image element src set successfully');
+    } else {
+        console.log('No image element or hero path, using default');
+        if (imageElement) {
+            // No images, show default
+            imageElement.src = 'assets/images/small white on black ENKIVERSE logo.png';
+            imageElement.alt = 'Default logo';
+        }
     }
 
     // Update name and bio
@@ -190,7 +256,78 @@ function renderArtists(artists) {
         portfolioLink.href = featuredArtist.website;
     }
 
-    console.log('Featured artist rendered:', featuredArtist);
+    console.log('=== Featured artist render completed ===');
+}
+
+function renderHomeFeaturedArtist(artists) {
+    console.log('renderHomeFeaturedArtist called with', artists?.length, 'artists');
+
+    const featuredArtistImage = document.querySelector('#featured-artist-image');
+    if (!featuredArtistImage || !artists || artists.length === 0) {
+        console.log('No featured artist image element or no artists');
+        return;
+    }
+
+    // Find the featured artist
+    const featuredArtist = artists.find(artist => artist.featured) || artists[0];
+    console.log('Setting featured artist image for:', featuredArtist.name);
+
+    // Update image and info
+    let heroImagePath = null;
+    if (featuredArtist.images && featuredArtist.images.length > 0) {
+        const heroImageObj = featuredArtist.images.find(img => img.isHero) || featuredArtist.images[0];
+        heroImagePath = heroImageObj.path || heroImageObj;
+
+        if (heroImagePath.includes('/thumbnails/')) {
+            heroImagePath = heroImagePath.replace('/thumbnails/', '/large/');
+        }
+    }
+
+    if (heroImagePath) {
+        // Convert to GitHub URL with fallbacks
+        const repoPath = 'enki-verse/enkiverse-website';
+        const decodedPath = decodeURIComponent(heroImagePath);
+        const finalImageUrl = `https://raw.githubusercontent.com/${repoPath}/main/${decodedPath}`;
+
+        console.log('Setting home featured image src to:', finalImageUrl);
+        featuredArtistImage.src = finalImageUrl;
+        featuredArtistImage.alt = featuredArtist.name || 'Featured Artist';
+        featuredArtistImage.style.display = 'block';
+
+        // Add error handling with fallbacks
+        featuredArtistImage.onerror = function() {
+            console.log('Home featured image failed to load:', finalImageUrl);
+            const fallbackUrls = [
+                `https://raw.githubusercontent.com/${repoPath}/master/${decodedPath}`,
+                `https://raw.githubusercontentusercontent.com/${repoPath}/main/${decodedPath}`,
+                `https://raw.githubusercontentusercontent.com/${repoPath}/master/${decodedPath}`
+            ];
+
+            let fallbackIndex = 0;
+            function tryNextFallback() {
+                if (fallbackIndex >= fallbackUrls.length) {
+                    featuredArtistImage.src = 'assets/images/small white on black ENKIVERSE logo.png';
+                    featuredArtistImage.alt = 'Default logo';
+                    return;
+                }
+
+                const fallbackUrl = fallbackUrls[fallbackIndex++];
+                console.log('Trying home featured fallback:', fallbackUrl);
+
+                const testImg = new Image();
+                testImg.onload = function() {
+                    featuredArtistImage.src = fallbackUrl;
+                };
+                testImg.onerror = tryNextFallback;
+                testImg.src = fallbackUrl;
+            }
+            tryNextFallback();
+        };
+
+        featuredArtistImage.onload = function() {
+            console.log('Home featured image loaded successfully:', finalImageUrl);
+        };
+    }
 }
 
 function renderProjects(projects) {
@@ -256,14 +393,7 @@ function loadSiteConfig() {
         });
 }
 
-function renderArtists(artists) {
-    const container = document.querySelector('#additional-artists');
-    if (!container) return;
-
-    // Additional artists rendering would go here
-    // For now, just log the data
-    console.log('Artists data loaded:', artists);
-}
+// Removed duplicate renderArtists function - the main one above handles all rendering
 
 function renderProjects(projects) {
     const container = document.querySelector('#additional-projects');
