@@ -130,6 +130,109 @@ function loadArtistsData() {
         });
 }
 
+function renderArtists(artists) {
+    const featuredArtistElement = document.querySelector('.artist-featured');
+    if (!featuredArtistElement || !artists || artists.length === 0) return;
+
+    // Find the featured artist
+    const featuredArtist = artists.find(artist => artist.featured) || artists[0];
+
+    // Update the featured artist
+    const imageElement = featuredArtistElement.querySelector('.artist-featured-image img');
+
+    // Find hero image - handle both old and new formats
+    let heroImagePath = null;
+    if (featuredArtist.images && featuredArtist.images.length > 0) {
+        // New format with objects
+        const heroImageObj = featuredArtist.images.find(img => img.isHero) || featuredArtist.images[0];
+        heroImagePath = heroImageObj.path || heroImageObj;
+
+        // Convert thumbnail path to full image path for hero display
+        if (heroImagePath.includes('/thumbnails/')) {
+            heroImagePath = heroImagePath.replace('/thumbnails/', '/large/');
+        }
+    }
+
+    if (imageElement && heroImagePath) {
+        // Convert to GitHub URL for public display
+        const repoPath = 'enki-verse/enkiverse-website';
+        imageElement.src = `https://raw.githubusercontent.com/${repoPath}/main/${heroImagePath}`;
+        imageElement.alt = featuredArtist.name || 'Artist';
+
+        // Show image on load
+        imageElement.style.display = 'block';
+
+        // Handle image error (show placeholder if image doesn't exist)
+        imageElement.onerror = function() {
+            this.src = 'assets/images/small white on black ENKIVERSE logo.png';
+            this.alt = 'Default logo';
+        };
+    } else if (imageElement) {
+        // No images, show default
+        imageElement.src = 'assets/images/small white on black ENKIVERSE logo.png';
+        imageElement.alt = 'Default logo';
+    }
+
+    // Update name and bio
+    const nameElement = featuredArtistElement.querySelector('h2');
+    if (nameElement) {
+        nameElement.textContent = featuredArtist.name || 'Artist';
+    }
+
+    const bioElement = featuredArtistElement.querySelector('.artist-bio');
+    if (bioElement) {
+        bioElement.textContent = featuredArtist.bio || 'Pure expression through visual art and emerging technologies. Pushing the boundaries of digital creativity.';
+    }
+
+    // Update website link
+    const portfolioLink = featuredArtistElement.querySelector('.btn-secondary');
+    if (portfolioLink && featuredArtist.website) {
+        portfolioLink.href = featuredArtist.website;
+    }
+
+    console.log('Featured artist rendered:', featuredArtist);
+}
+
+function renderProjects(projects) {
+    const container = document.querySelector('#additional-projects');
+    if (!container) return;
+
+    if (projects.length === 0) {
+        container.innerHTML = '<p>No additional projects at this time.</p>';
+        return;
+    }
+
+    let html = '<h3>Additional Projects</h3>';
+    projects.slice(1).forEach(project => { // Skip first (featured) project
+        // Find hero image
+        let heroImagePath = null;
+        if (project.images && project.images.length > 0) {
+            const heroImageObj = project.images.find(img => img.isHero) || project.images[0];
+            heroImagePath = heroImageObj.path || heroImageObj;
+        }
+
+        let imageUrl = '';
+        if (heroImagePath) {
+            if (heroImagePath.includes('/thumbnails/')) {
+                heroImagePath = heroImagePath.replace('/thumbnails/', '/large/');
+            }
+            imageUrl = `https://raw.githubusercontent.com/enki-verse/enkiverse-website/main/${heroImagePath}`;
+        } else {
+            imageUrl = 'assets/images/small white on black ENKIVERSE logo.png';
+        }
+
+        html += `
+            <div class="project-item">
+                <img src="${imageUrl}" alt="${project.title}" style="width: 200px; height: 150px; object-fit: cover; margin: 10px;">
+                <h4>${project.title}</h4>
+                <p>${project.description || 'No description available'}</p>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+}
+
 function loadProjectsData() {
     fetch('assets/data/projects.json')
         .then(response => response.json())

@@ -586,7 +586,12 @@ function updateContentImages(contentType, imageUrls) {
         html += `
             <div class="selected-image">
                 <img src="${displayUrl}" alt="${filename}" style="max-width: 80px; max-height: 60px;">
-                <span>${filename}</span>
+                <div class="image-details">
+                    <span>${filename}</span>
+                    <input type="radio" name="${contentType}-hero" value="${index}" data-url="${imageUrls[index]}"
+                         onchange="setHeroImage('${contentType}', ${index})">
+                    <label>Hero</label>
+                </div>
                 <button type="button" class="remove-image-btn" data-index="${index}">×</button>
             </div>
         `;
@@ -602,7 +607,43 @@ function updateContentImages(contentType, imageUrls) {
         }
     });
 
+    // Set up hero image selection (first image as default hero if available)
+    if (imageUrls.length > 0) {
+        updateHeroSelection(contentType, imageUrls);
+    }
+
     console.log('Updated images display for', contentType, 'with', displayUrls.length, 'images');
+}
+
+// Update hero image selection display
+function updateHeroSelection(contentType, imageUrls) {
+    const heroSelectionDiv = document.getElementById('hero-image-selection');
+    if (!heroSelectionDiv) return;
+
+    if (imageUrls.length === 0) {
+        heroSelectionDiv.innerHTML = '';
+        return;
+    }
+
+    let html = '<div style="margin-top: 10px;"><strong>Set Hero Image:</strong></div>';
+    imageUrls.forEach((url, index) => {
+        const filename = url.replace('https://raw.githubusercontent.com/enki-verse/enkiverse-website/main/', '').replace('/large/', '').replace('/thumbnails/', '');
+        const isChecked = index === 0 ? 'checked' : ''; // First image as default
+        html += `
+            <div style="margin: 5px 0;">
+                <input type="radio" id="hero-${contentType}-${index}" name="${contentType}-hero-image" value="${index}" ${isChecked}>
+                <label for="hero-${contentType}-${index}">Use "${filename.split('/').pop()}" as hero image</label>
+            </div>
+        `;
+    });
+
+    heroSelectionDiv.innerHTML = html;
+}
+
+// Global function for hero image selection
+function setHeroImage(contentType, heroIndex) {
+    console.log(`Setting hero image for ${contentType}:`, heroIndex);
+    // This will be used when processing the form data
 }
 
 function removeSelectedImage(contentType, index) {
@@ -761,21 +802,31 @@ async function uploadImageToGitHub(file) {
 
 async function handleArtistFormSubmit(e) {
     console.log('=== ARTIST FORM SUBMIT START ===');
-    console.log('Form submit event triggered');
 
     e.preventDefault();
+
+    console.log('Form submit event triggered and prevented');
 
     const formData = new FormData(e.target);
     const imagesFromDisplay = getImagesFromDisplay('artist');
 
     console.log('Images from display:', imagesFromDisplay);
 
+    // Get selected hero image index
+    const heroImageField = e.target.querySelector('input[name="artist-hero-image"][checked]');
+    const heroImageIndex = heroImageField ? parseInt(heroImageField.value) : null;
+
+    console.log('Hero image index:', heroImageIndex);
+
     const artistData = {
         name: formData.get('name'),
         bio: formData.get('bio'),
         website: formData.get('website') || null,
         id: formData.get('id') || Date.now().toString(),
-        images: imagesFromDisplay
+        images: imagesFromDisplay.map((path, index) => ({
+            path: path,
+            isHero: index === heroImageIndex // Mark hero image
+        }))
     };
 
     console.log('Final artist data:', artistData);
@@ -913,14 +964,41 @@ function showArtistModal(artist = null) {
 
         // Display existing images
         if (artist.images && artist.images.length > 0) {
-            selectedImages = artist.images.map(img => {
-                // Convert thumbnail path back to full URL for display
-                if (img.includes('assets/images/thumbnails/')) {
-                    return `https://raw.githubusercontent.com/enki-verse/enkiverse-website/main/${img.replace('/thumbnails/', '/large/')}`;
+            // Handle both old string format and new object format
+            const imageUrls = artist.images.map(img => {
+                if (typeof img === 'string') {
+                    // Old format - string path
+                    if (img.includes('assets/images/thumbnails/')) {
+                        return `https://raw.githubusercontent.com/enki-verse/enkiverse-website/main/${img.replace('/thumbnails/', '/large/')}`;
+                    }
+                    return img;
+                } else if (img.path) {
+                    // New format - object with path
+                    if (img.path.includes('assets/images/thumbnails/')) {
+                        return `https://raw.githubusercontent.com/enki-verse/enkiverse-website/main/${img.path.replace('/thumbnails/', '/large/')}`;
+                    }
+                    return img.path;
                 }
                 return img;
             });
+
+            selectedImages = imageUrls;
             updateContentImages('artist', selectedImages);
+
+            // After a short delay, set the hero image radio button
+            setTimeout(() => {
+                const heroIndex = artist.images.findIndex(img =>
+                    (typeof img === 'object' && img.isHero) ||
+                    (typeof img === 'string') // If old format, first image is hero
+                );
+                if (heroIndex >= 0) {
+                    const heroRadio = document.querySelector(`input[name="artist-hero-image"][value="${heroIndex}"]`);
+                    if (heroRadio) {
+                        heroRadio.checked = true;
+                        console.log('Set hero image radio for index:', heroIndex);
+                    }
+                }
+            }, 100);
         } else {
             document.getElementById('artist-images-list').innerHTML = '';
         }
@@ -1036,24 +1114,46 @@ function closeModal(e) {
 async function handleProjectFormSubmit(e) {
     e.preventDefault();
 
+    console.log('=== PROJECT FORM SUBMIT START ===');
+    console.log('Project form submit event triggered');
+
     const formData = new FormData(e.target);
+    const imagesFromDisplay = getImagesFromDisplay('project');
+
+    console.log('Images from display:', imagesFromDisplay);
+
+    // Get selected hero image index
+    const heroImageField = e.target.querySelector('input[name="project-hero-image"][checked]');
+    const heroImageIndex = heroImageField ? parseInt(heroImageField.value) : null;
+
+    console.log('Project hero image index:', heroImageIndex);
+
     const projectData = {
         title: formData.get('title'),
         description: formData.get('description'),
-        images: getImagesFromDisplay('project'),
+        images: imagesFromDisplay.map((path, index) => ({
+            path: path,
+            isHero: index === heroImageIndex // Mark hero image
+        })),
         id: formData.get('id') || Date.now().toString()
     };
 
+    console.log('Final project data:', projectData);
+
     try {
+        console.log('Calling saveProject...');
         // Save project via GitHub API
         const success = await saveProject(projectData);
+        console.log('saveProject result:', success);
 
         if (success) {
+            console.log('SUCCESS: Project saved successfully!');
             // Close modal and refresh list
             closeModal();
             loadProjects();
             showMessage('Project saved successfully!', 'success', document.getElementById('projects-tab'));
         } else {
+            console.log('FAILURE: Failed to save project');
             showMessage('Failed to save project. Please try again.', 'error', document.getElementById('projects-tab'));
         }
     } catch (error) {
