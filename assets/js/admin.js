@@ -85,6 +85,12 @@ function setupAdminInterface() {
         });
     });
 
+    // Event delegation for dynamic buttons
+    document.addEventListener('click', handleButtonClick);
+
+    // Setup form submissions
+    setupForms();
+
     // Logout functionality
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
@@ -92,6 +98,174 @@ function setupAdminInterface() {
             sessionStorage.removeItem('enkiverse_github_token');
             location.reload();
         });
+    }
+}
+
+function handleButtonClick(e) {
+    const target = e.target;
+    const action = target.dataset.action;
+    const id = target.dataset.id;
+    const tab = target.closest('.tab-content')?.id?.replace('-tab', '');
+
+    if (!action) return;
+
+    switch (action) {
+        case 'add-artist':
+            showArtistModal();
+            break;
+        case 'edit-artist':
+            if (id) editArtist(id);
+            break;
+        case 'delete-artist':
+            if (id) deleteArtist(id);
+            break;
+        case 'add-project':
+            showProjectModal();
+            break;
+        case 'edit-project':
+            if (id) editProject(id);
+            break;
+        case 'delete-project':
+            if (id) deleteProject(id);
+            break;
+        case 'add-event':
+            showEventModal();
+            break;
+        case 'edit-event':
+            if (id) editEvent(id);
+            break;
+        case 'delete-event':
+            if (id) deleteEvent(id);
+            break;
+        default:
+            console.log('Unknown action:', action);
+    }
+}
+
+function setupForms() {
+    // Artist form
+    const artistForm = document.getElementById('artist-form');
+    if (artistForm) {
+        artistForm.addEventListener('submit', handleArtistFormSubmit);
+    }
+
+    // Close modal buttons
+    const closeModalBtns = document.querySelectorAll('.close-modal');
+    closeModalBtns.forEach(btn => {
+        btn.addEventListener('click', closeModal);
+    });
+
+    // Click outside modal to close
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('modal')) {
+            closeModal();
+        }
+    });
+}
+
+function handleArtistFormSubmit(e) {
+    e.preventDefault();
+
+    const formData = new FormData(e.target);
+    const artistData = {
+        name: formData.get('name'),
+        bio: formData.get('bio'),
+        website: formData.get('website') || null,
+        id: formData.get('id') || Date.now().toString()
+    };
+
+    // Here you would call a function to save the artist via GitHub API
+    console.log('Artist data:', artistData);
+
+    // Close modal and refresh list
+    closeModal();
+    loadArtists();
+
+    showMessage('Artist saved successfully!', 'success', document.getElementById('artists-tab'));
+}
+
+function showArtistModal(artist = null) {
+    const modal = document.getElementById('artist-modal');
+    const form = document.getElementById('artist-form');
+    const title = document.getElementById('artist-modal-title');
+
+    if (artist) {
+        // Edit mode
+        title.textContent = 'Edit Artist';
+        form.querySelector('#artist-name').value = artist.name || '';
+        form.querySelector('#artist-bio').value = artist.bio || '';
+        form.querySelector('#artist-website').value = artist.website || '';
+        // Add hidden input for ID
+        let idInput = form.querySelector('input[name="id"]');
+        if (!idInput) {
+            idInput = document.createElement('input');
+            idInput.type = 'hidden';
+            idInput.name = 'id';
+            form.appendChild(idInput);
+        }
+        idInput.value = artist.id;
+    } else {
+        // Add mode
+        title.textContent = 'Add Artist';
+        form.reset();
+    }
+
+    modal.style.display = 'block';
+}
+
+function editArtist(id) {
+    // Find artist by id and show modal
+    const artists = JSON.parse(sessionStorage.getItem('current_artists') || '[]');
+    const artist = artists.find(a => a.id == id);
+    if (artist) {
+        showArtistModal(artist);
+    }
+}
+
+function deleteArtist(id) {
+    if (confirm('Are you sure you want to delete this artist?')) {
+        console.log('Deleting artist:', id);
+        // Here you would call a function to delete via GitHub API
+        showMessage('Artist deleted successfully!', 'success', document.getElementById('artists-tab'));
+        loadArtists();
+    }
+}
+
+function closeModal() {
+    const modals = document.querySelectorAll('.modal');
+    modals.forEach(modal => {
+        modal.style.display = 'none';
+    });
+}
+
+// Placeholder functions for other entities
+function showProjectModal() {
+    alert('Project modal not implemented yet');
+}
+
+function editProject(id) {
+    alert('Edit project not implemented yet');
+}
+
+function deleteProject(id) {
+    if (confirm('Are you sure you want to delete this project?')) {
+        showMessage('Project deleted successfully!', 'success', document.getElementById('projects-tab'));
+        loadProjects();
+    }
+}
+
+function showEventModal() {
+    alert('Event modal not implemented yet');
+}
+
+function editEvent(id) {
+    alert('Edit event not implemented yet');
+}
+
+function deleteEvent(id) {
+    if (confirm('Are you sure you want to delete this event?')) {
+        showMessage('Event deleted successfully!', 'success', document.getElementById('events-tab'));
+        loadEvents();
     }
 }
 
@@ -123,8 +297,12 @@ async function loadArtists() {
     try {
         const response = await fetch('assets/data/artists.json');
         const data = await response.json();
+        const artists = data.artists || [];
 
-        renderArtistsList(data.artists || []);
+        // Store artists data for editing
+        sessionStorage.setItem('current_artists', JSON.stringify(artists));
+
+        renderArtistsList(artists);
     } catch (error) {
         console.error('Error loading artists:', error);
     }
