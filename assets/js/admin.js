@@ -376,6 +376,41 @@ async function handleImageUpload() {
 let currentImageSelectionType = null;
 let selectedImages = [];
 
+// Helper function to get images from the visual display
+function getImagesFromDisplay(contentType) {
+    const imageListId = `${contentType}-images-list`;
+    const container = document.getElementById(imageListId);
+
+    if (!container) return [];
+
+    // Get all selected images from the display
+    const imageDivs = container.querySelectorAll('.selected-image');
+    const images = Array.from(imageDivs).map(div => {
+        const img = div.querySelector('img');
+        if (img && img.src) {
+            if (img.src.includes('raw.githubusercontent.com')) {
+                // Convert from full GitHub URL to local path for saving
+                const url = new URL(img.src);
+                const path = url.pathname;
+                // Path is like /enki-verse/enkiverse-website/main/assets/images/large/1234567890_image.jpg
+                // We want to save as: assets/images/thumbnails/1234567890_image.jpg
+                const pathParts = path.split('/');
+                if (pathParts.length >= 6) {
+                    const filename = pathParts[pathParts.length - 1]; // Get filename from end
+                    return `assets/images/thumbnails/${filename}`;
+                }
+            } else {
+                // Already a local path, ensure it's thumbnail path
+                return img.src.replace('/large/', '/thumbnails/');
+            }
+        }
+        return null;
+    }).filter(img => img !== null);
+
+    console.log('Images from display for', contentType, ':', images);
+    return images;
+}
+
 function showImageSelectionModal(contentType) {
     currentImageSelectionType = contentType;
     selectedImages = [];
@@ -487,15 +522,29 @@ function updateContentImages(contentType, imageUrls) {
 
     if (!container) return;
 
-    // Convert full image URLs to thumbnail URLs
-    const thumbnailUrls = imageUrls.map(url => url.replace('/large/', '/thumbnails/'));
+    // Convert paths to display URLs - if already full GitHub URLs, use them
+    // If local paths, convert to GitHub URLs for display
+    const displayUrls = imageUrls.map(url => {
+        if (url.includes('raw.githubusercontent.com')) {
+            // Already a full GitHub URL, convert to thumbnail
+            return url.replace('/large/', '/thumbnails/');
+        } else if (url.includes('assets/images/thumbnails/')) {
+            // Local thumbnail path, convert to full GitHub URL
+            return `https://raw.githubusercontent.com/enki-verse/enkiverse-website/main/${url.replace('/thumbnails/', '/large/')}`;
+        } else if (url.includes('assets/images/')) {
+            // Other local path, assume thumb and convert to GitHub
+            return `https://raw.githubusercontent.com/enki-verse/enkiverse-website/main/${url.replace('/thumbnails/', '/large/')}`;
+        }
+        return url; // Fallback
+    });
 
     let html = '';
-    thumbnailUrls.forEach((url, index) => {
-        const filename = url.split('/').pop();
+    displayUrls.forEach((url, index) => {
+        const filename = url.split('/').pop().split('?')[0]; // Remove query params
+        const displayUrl = url.replace('/large/', '/thumbnails/'); // Show thumbnail version
         html += `
             <div class="selected-image">
-                <img src="${url}" alt="${filename}" style="max-width: 80px; max-height: 60px;">
+                <img src="${displayUrl}" alt="${filename}" style="max-width: 80px; max-height: 60px;">
                 <span>${filename}</span>
                 <button type="button" class="remove-image-btn" data-index="${index}">×</button>
             </div>
@@ -511,11 +560,19 @@ function updateContentImages(contentType, imageUrls) {
             removeSelectedImage(contentType, index);
         }
     });
+
+    console.log('Updated images display for', contentType, 'with', displayUrls.length, 'images');
 }
 
 function removeSelectedImage(contentType, index) {
-    selectedImages.splice(index, 1);
-    updateContentImages(contentType, selectedImages);
+    // Get current images displayed
+    const currentImages = getImagesFromDisplay(contentType);
+    // Remove the image at the specified index
+    currentImages.splice(index, 1);
+    // Re-display the images
+    updateContentImages(contentType, currentImages);
+    // Since we're changing the displayed images, we need to store them in selectedImages for the form to read
+    selectedImages = currentImages;
 }
 
 // Associate uploaded images with content (artists, projects, events)
@@ -670,13 +727,7 @@ async function handleArtistFormSubmit(e) {
         bio: formData.get('bio'),
         website: formData.get('website') || null,
         id: formData.get('id') || Date.now().toString(),
-        images: selectedImages.length > 0 ? selectedImages.map(url => {
-            if (url.includes('raw.githubusercontent.com')) {
-                // Convert from full GitHub URL to local path
-                return url.replace('https://raw.githubusercontent.com/enki-verse/enkiverse-website/main/', '').replace('/large/', '/thumbnails/');
-            }
-            return url;
-        }) : []
+        images: getImagesFromDisplay('artist')
     };
 
     try {
@@ -885,13 +936,7 @@ async function handleProjectFormSubmit(e) {
     const projectData = {
         title: formData.get('title'),
         description: formData.get('description'),
-        images: selectedImages.length > 0 ? selectedImages.map(url => {
-            if (url.includes('raw.githubusercontent.com')) {
-                // Convert from full GitHub URL to local path
-                return url.replace('https://raw.githubusercontent.com/enki-verse/enkiverse-website/main/', '').replace('/large/', '/thumbnails/');
-            }
-            return url;
-        }) : [],
+        images: getImagesFromDisplay('project'),
         id: formData.get('id') || Date.now().toString()
     };
 
