@@ -304,8 +304,8 @@ async function uploadImageToGitHub(file) {
         console.log('Processed result:', processedResult);
 
         if (!processedResult.success) {
-            console.error('Image processing failed:', processedResult.error);
-            return { success: false, error: processedResult.error };
+            console.error('Image processing failed:', processedResult.error || 'Unknown error');
+            return { success: false, error: processedResult.error || 'Image processing failed' };
         }
 
         // Generate thumbnail
@@ -313,9 +313,10 @@ async function uploadImageToGitHub(file) {
         const thumbnailResult = await window.imageProcessor.generateThumbnail(processedResult.url);
         console.log('Thumbnail result:', thumbnailResult);
 
-        if (!thumbnailResult) {
+        if (!thumbnailResult || (thumbnailResult.hasOwnProperty('success') && !thumbnailResult.success)) {
             console.error('Thumbnail generation failed');
-            return { success: false, error: 'Failed to generate thumbnail' };
+            const errorMsg = thumbnailResult && thumbnailResult.error ? thumbnailResult.error : 'Failed to generate thumbnail';
+            return { success: false, error: errorMsg };
         }
 
         // Create filename with timestamp to avoid conflicts

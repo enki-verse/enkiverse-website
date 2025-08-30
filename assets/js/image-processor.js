@@ -21,75 +21,125 @@ async function processImage(file) {
         reader.onload = function(event) {
             const img = new Image();
             img.onload = function() {
-                // Create canvas for processing
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
+                try {
+                    // Create canvas for processing
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
 
-                // Resize image (max 800px width, maintain aspect ratio)
-                const maxWidth = 800;
-                const aspectRatio = img.width / img.height;
-                let newWidth = maxWidth;
-                let newHeight = maxWidth / aspectRatio;
+                    // Resize image (max 800px width, maintain aspect ratio)
+                    const maxWidth = 800;
+                    const aspectRatio = img.width / img.height;
+                    let newWidth = maxWidth;
+                    let newHeight = maxWidth / aspectRatio;
 
-                canvas.width = newWidth;
-                canvas.height = newHeight;
+                    canvas.width = newWidth;
+                    canvas.height = newHeight;
 
-                // Draw resized image
-                ctx.drawImage(img, 0, 0, newWidth, newHeight);
+                    // Draw resized image
+                    ctx.drawImage(img, 0, 0, newWidth, newHeight);
 
-                // Compress and convert to blob
-                canvas.toBlob(function(blob) {
+                    // Compress and convert to blob
+                    canvas.toBlob(function(blob) {
+                        if (blob) {
+                            resolve({
+                                success: true,
+                                originalFile: file,
+                                processedBlob: blob,
+                                width: newWidth,
+                                height: newHeight,
+                                url: URL.createObjectURL(blob)
+                            });
+                        } else {
+                            resolve({
+                                success: false,
+                                error: 'Failed to create blob from canvas'
+                            });
+                        }
+                    }, 'image/jpeg', 0.8); // 80% quality
+                } catch (canvasError) {
+                    console.error('Canvas processing error:', canvasError);
                     resolve({
-                        originalFile: file,
-                        processedBlob: blob,
-                        width: newWidth,
-                        height: newHeight,
-                        url: URL.createObjectURL(blob)
+                        success: false,
+                        error: `Canvas processing failed: ${canvasError.message}`
                     });
-                }, 'image/jpeg', 0.8); // 80% quality
+                }
             };
+
+            img.onerror = function() {
+                resolve({
+                    success: false,
+                    error: 'Failed to load image for processing'
+                });
+            };
+
             img.src = event.target.result;
         };
 
         reader.onerror = function() {
-            reject('Error reading image file');
+            resolve({
+                success: false,
+                error: 'Error reading image file'
+            });
         };
 
         reader.readAsDataURL(file);
     });
 }
 
-function generateThumbnail(imgSrc, maxWidth = 200, maxHeight = 200) {
+async function generateThumbnail(imgSrc, maxWidth = 200, maxHeight = 200) {
     return new Promise((resolve) => {
         const img = new Image();
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
 
         img.onload = function() {
-            // Calculate thumbnail dimensions
-            let { width, height } = calculateDimensions(
-                img.width,
-                img.height,
-                maxWidth,
-                maxHeight
-            );
+            try {
+                // Calculate thumbnail dimensions
+                let { width, height } = calculateDimensions(
+                    img.width,
+                    img.height,
+                    maxWidth,
+                    maxHeight
+                );
 
-            canvas.width = width;
-            canvas.height = height;
+                canvas.width = width;
+                canvas.height = height;
 
-            // Draw thumbnail
-            ctx.drawImage(img, 0, 0, width, height);
+                // Draw thumbnail
+                ctx.drawImage(img, 0, 0, width, height);
 
-            // Convert to blob
-            canvas.toBlob(function(blob) {
-                const thumbnailUrl = URL.createObjectURL(blob);
+                // Convert to blob
+                canvas.toBlob(function(blob) {
+                    if (blob) {
+                        const thumbnailUrl = URL.createObjectURL(blob);
+                        resolve({
+                            success: true,
+                            blob: blob,
+                            url: thumbnailUrl,
+                            width: width,
+                            height: height
+                        });
+                    } else {
+                        resolve({
+                            success: false,
+                            error: 'Failed to create thumbnail blob'
+                        });
+                    }
+                }, 'image/jpeg', 0.7); // 70% quality for thumbnails
+            } catch (canvasError) {
+                console.error('Thumbnail canvas processing error:', canvasError);
                 resolve({
-                    blob: blob,
-                    url: thumbnailUrl,
-                    width: width,
-                    height: height
+                    success: false,
+                    error: `Thumbnail processing failed: ${canvasError.message}`
                 });
-            }, 'image/jpeg', 0.7); // 70% quality for thumbnails
+            }
+        };
+
+        img.onerror = function() {
+            resolve({
+                success: false,
+                error: 'Failed to load image for thumbnail generation'
+            });
         };
 
         // If imgSrc is already an object URL or blob URL
