@@ -144,6 +144,9 @@ function handleButtonClick(e) {
         case 'delete-image':
             if (path) deleteImage(path);
             break;
+        case 'select-images':
+            if (target.dataset.type) showImageSelectionModal(target.dataset.type);
+            break;
         default:
             console.log('Unknown action:', action);
     }
@@ -186,6 +189,7 @@ function setupImageUpload() {
     const imageInput = document.getElementById('image-upload');
     const uploadBtn = document.getElementById('upload-images');
     const testBtn = document.getElementById('test-upload');
+    const assignmentSelect = document.getElementById('image-assignment');
 
     if (imageInput && uploadBtn) {
         uploadBtn.addEventListener('click', handleImageUpload);
@@ -193,6 +197,78 @@ function setupImageUpload() {
 
     if (testBtn) {
         testBtn.addEventListener('click', handleTestUpload);
+    }
+
+    if (assignmentSelect) {
+        assignmentSelect.addEventListener('change', handleAssignmentChange);
+    }
+}
+
+function handleAssignmentChange(e) {
+    const assignment = e.target.value;
+    const assignmentDetails = document.getElementById('assignment-details');
+    const assignmentTarget = document.getElementById('assignment-target');
+
+    if (assignment === 'none') {
+        assignmentDetails.style.display = 'none';
+    } else {
+        // Populate options based on assignment type
+        populateAssignmentOptions(assignment, assignmentTarget);
+        assignmentDetails.style.display = 'block';
+    }
+}
+
+async function populateAssignmentOptions(assignmentType, targetSelect) {
+    targetSelect.innerHTML = '<option value="">Select ' + assignmentType + '...</option>';
+
+    try {
+        let data, idField, nameField;
+
+        switch (assignmentType) {
+            case 'artist':
+                const artistsResponse = await fetch('assets/data/artists.json');
+                data = await artistsResponse.json();
+                idField = 'id';
+                nameField = 'name';
+                break;
+            case 'project':
+                const projectsResponse = await fetch('assets/data/projects.json');
+                data = await projectsResponse.json();
+                data = data.projects;
+                idField = 'id';
+                nameField = 'title';
+                break;
+            case 'event':
+                const eventsResponse = await fetch('assets/data/events.json');
+                data = await eventsResponse.json();
+                data = data.events;
+                idField = 'id';
+                nameField = 'title';
+                break;
+            default:
+                return;
+        }
+
+        if (data && data.length > 0) {
+            data.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item[idField];
+                option.textContent = item[nameField] || item[idField];
+                targetSelect.appendChild(option);
+            });
+        } else {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'No ' + assignmentType + 's found';
+            targetSelect.appendChild(option);
+        }
+
+    } catch (error) {
+        console.error('Error loading assignment options:', error);
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'Error loading ' + assignmentType + 's';
+        targetSelect.appendChild(option);
     }
 }
 
@@ -284,13 +360,232 @@ async function handleImageUpload() {
             showMessage('Failed to upload any images. Check console for details.', 'error', imagesTab);
         }
 
-        // Clear input
+        // Clear input and assignment
         imageInput.value = '';
+        document.getElementById('image-assignment').value = 'none';
+        handleAssignmentChange({ target: { value: 'none' } });
 
     } catch (error) {
         console.error('Error handling image upload:', error);
         console.error('Error stack:', error.stack);
         showMessage('An error occurred during upload. Please check console for details.', 'error', imagesTab);
+    }
+}
+
+// Image selection functionality
+let currentImageSelectionType = null;
+let selectedImages = [];
+
+function showImageSelectionModal(contentType) {
+    currentImageSelectionType = contentType;
+    selectedImages = [];
+
+    const modal = document.getElementById('image-selection-modal');
+    const gallery = document.getElementById('image-gallery');
+
+    // Load available images
+    loadImageGallery(gallery);
+
+    // Reset selection count
+    document.getElementById('selected-count').textContent = '0';
+
+    modal.style.display = 'block';
+}
+
+async function loadImageGallery(container) {
+    try {
+        const images = await getImagesList();
+
+        if (images.length === 0) {
+            container.innerHTML = '<div class="no-images">No images available. Upload some images first.</div>';
+            return;
+        }
+
+        let html = '';
+        images.forEach(image => {
+            const isSelected = selectedImages.includes(image.fullUrl);
+            html += `
+                <div class="gallery-image ${isSelected ? 'selected' : ''}" data-image-url="${image.fullUrl}">
+                    <img src="${image.thumbnailUrl}" alt="${image.name}" loading="lazy">
+                    <div class="image-overlay">
+                        <button type="button" class="image-select-btn" data-image-url="${image.fullUrl}">
+                            ${isSelected ? 'Selected' : 'Select'}
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+
+        // Add click handlers
+        container.addEventListener('click', handleImageGalleryClick);
+
+    } catch (error) {
+        console.error('Error loading image gallery:', error);
+        container.innerHTML = '<div class="error">Failed to load images.</div>';
+    }
+}
+
+function handleImageGalleryClick(e) {
+    if (e.target.classList.contains('image-select-btn')) {
+        e.preventDefault();
+        const imageUrl = e.target.dataset.imageUrl;
+        toggleImageSelection(imageUrl);
+    }
+}
+
+function toggleImageSelection(imageUrl) {
+    const gallery = document.getElementById('image-gallery');
+    const imageDiv = gallery.querySelector(`[data-image-url="${imageUrl}"]`);
+    const selectBtn = imageDiv.querySelector('.image-select-btn');
+
+    const index = selectedImages.indexOf(imageUrl);
+
+    if (index > -1) {
+        // Remove from selection
+        selectedImages.splice(index, 1);
+        imageDiv.classList.remove('selected');
+        selectBtn.textContent = 'Select';
+    } else {
+        // Add to selection
+        selectedImages.push(imageUrl);
+        imageDiv.classList.add('selected');
+        selectBtn.textContent = 'Selected';
+    }
+
+    // Update counter
+    document.getElementById('selected-count').textContent = selectedImages.length;
+}
+
+// Handle modal confirmation
+document.addEventListener('click', function(e) {
+    if (e.target.id === 'confirm-image-selection') {
+        confirmImageSelection();
+    }
+});
+
+function confirmImageSelection() {
+    if (selectedImages.length === 0) {
+        alert('Please select at least one image.');
+        return;
+    }
+
+    // Update the appropriate form's image list
+    updateContentImages(currentImageSelectionType, selectedImages);
+
+    // Close modal
+    closeModal();
+
+    // Clear selection
+    selectedImages = [];
+}
+
+function updateContentImages(contentType, imageUrls) {
+    const imageListId = `${contentType}-images-list`;
+    const container = document.getElementById(imageListId);
+
+    if (!container) return;
+
+    // Convert full image URLs to thumbnail URLs
+    const thumbnailUrls = imageUrls.map(url => url.replace('/large/', '/thumbnails/'));
+
+    let html = '';
+    thumbnailUrls.forEach((url, index) => {
+        const filename = url.split('/').pop();
+        html += `
+            <div class="selected-image">
+                <img src="${url}" alt="${filename}" style="max-width: 80px; max-height: 60px;">
+                <span>${filename}</span>
+                <button type="button" class="remove-image-btn" data-index="${index}">×</button>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+
+    // Add remove button handlers
+    container.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-image-btn')) {
+            const index = parseInt(e.target.dataset.index);
+            removeSelectedImage(contentType, index);
+        }
+    });
+}
+
+function removeSelectedImage(contentType, index) {
+    selectedImages.splice(index, 1);
+    updateContentImages(contentType, selectedImages);
+}
+
+// Associate uploaded images with content (artists, projects, events)
+async function associateImagesWithContent(imagePaths, contentType, contentId) {
+    try {
+        console.log('Associating images with content:', contentType, contentId, imagePaths);
+
+        let dataPath, dataKey;
+
+        switch (contentType) {
+            case 'artist':
+                dataPath = 'assets/data/artists.json';
+                dataKey = 'artists';
+                break;
+            case 'project':
+                dataPath = 'assets/data/projects.json';
+                dataKey = 'projects';
+                break;
+            case 'event':
+                dataPath = 'assets/data/events.json';
+                dataKey = 'events';
+                break;
+            default:
+                console.error('Unknown content type:', contentType);
+                return false;
+        }
+
+        // Get current data
+        const response = await fetch(dataPath);
+        const data = await response.json();
+        const items = data[dataKey] || [];
+
+        // Find the item to update
+        const itemIndex = items.findIndex(item => item.id === contentId);
+        if (itemIndex === -1) {
+            console.error('Content item not found:', contentId);
+            return false;
+        }
+
+        // Ensure the item has an images array
+        if (!items[itemIndex].images) {
+            items[itemIndex].images = [];
+        }
+
+        // Add the new images (only thumbnail paths for display)
+        const thumbnailPaths = imagePaths.map(path => path.replace('/large/', '/thumbnails/'));
+        items[itemIndex].images.push(...thumbnailPaths);
+
+        // Update the data
+        const updatedData = { ...data, [dataKey]: items };
+        const jsonContent = JSON.stringify(updatedData, null, 2);
+
+        // Get current SHA and save
+        const fileSha = await getFileSha(dataPath);
+        const contentName = items[itemIndex].name || items[itemIndex].title || 'Unknown';
+        const commitMessage = `Admin: Added images to ${contentType} - ${contentName}`;
+
+        const result = await window.githubApi.createOrUpdateFile(
+            dataPath,
+            jsonContent,
+            commitMessage,
+            fileSha
+        );
+
+        console.log('Image association result:', result);
+        return result.success;
+
+    } catch (error) {
+        console.error('Error associating images with content:', error);
+        return false;
     }
 }
 
@@ -374,7 +669,14 @@ async function handleArtistFormSubmit(e) {
         name: formData.get('name'),
         bio: formData.get('bio'),
         website: formData.get('website') || null,
-        id: formData.get('id') || Date.now().toString()
+        id: formData.get('id') || Date.now().toString(),
+        images: selectedImages.length > 0 ? selectedImages.map(url => {
+            if (url.includes('raw.githubusercontent.com')) {
+                // Convert from full GitHub URL to local path
+                return url.replace('https://raw.githubusercontent.com/enki-verse/enkiverse-website/main/', '').replace('/large/', '/thumbnails/');
+            }
+            return url;
+        }) : []
     };
 
     try {
@@ -458,6 +760,9 @@ function showArtistModal(artist = null) {
     const form = document.getElementById('artist-form');
     const title = document.getElementById('artist-modal-title');
 
+    // Clear selected images when opening modal
+    selectedImages = [];
+
     if (artist) {
         // Edit mode
         title.textContent = 'Edit Artist';
@@ -473,10 +778,25 @@ function showArtistModal(artist = null) {
             form.appendChild(idInput);
         }
         idInput.value = artist.id;
+
+        // Display existing images
+        if (artist.images && artist.images.length > 0) {
+            selectedImages = artist.images.map(img => {
+                // Convert thumbnail path back to full URL for display
+                if (img.includes('assets/images/thumbnails/')) {
+                    return `https://raw.githubusercontent.com/enki-verse/enkiverse-website/main/${img.replace('/thumbnails/', '/large/')}`;
+                }
+                return img;
+            });
+            updateContentImages('artist', selectedImages);
+        } else {
+            document.getElementById('artist-images-list').innerHTML = '';
+        }
     } else {
         // Add mode
         title.textContent = 'Add Artist';
         form.reset();
+        document.getElementById('artist-images-list').innerHTML = '';
     }
 
     modal.style.display = 'block';
@@ -565,7 +885,13 @@ async function handleProjectFormSubmit(e) {
     const projectData = {
         title: formData.get('title'),
         description: formData.get('description'),
-        images: formData.get('images') ? formData.get('images').split(',').map(img => img.trim()) : [],
+        images: selectedImages.length > 0 ? selectedImages.map(url => {
+            if (url.includes('raw.githubusercontent.com')) {
+                // Convert from full GitHub URL to local path
+                return url.replace('https://raw.githubusercontent.com/enki-verse/enkiverse-website/main/', '').replace('/large/', '/thumbnails/');
+            }
+            return url;
+        }) : [],
         id: formData.get('id') || Date.now().toString()
     };
 
@@ -640,12 +966,14 @@ function showProjectModal(project = null) {
     const title = document.getElementById('project-modal-title');
 
     if (modal && form && title) {
+        // Clear selected images when opening modal
+        selectedImages = [];
+
         if (project) {
             // Edit mode
             title.textContent = 'Edit Project';
             form.querySelector('#project-title').value = project.title || '';
             form.querySelector('#project-description').value = project.description || '';
-            form.querySelector('#project-images').value = project.images ? project.images.join(', ') : '';
             // Add hidden input for ID
             let idInput = form.querySelector('input[name="id"]');
             if (!idInput) {
@@ -655,10 +983,25 @@ function showProjectModal(project = null) {
                 form.appendChild(idInput);
             }
             idInput.value = project.id;
+
+            // Display existing images
+            if (project.images && project.images.length > 0) {
+                selectedImages = project.images.map(img => {
+                    // Convert thumbnail path back to full URL for display
+                    if (img.includes('assets/images/thumbnails/')) {
+                        return `https://raw.githubusercontent.com/enki-verse/enkiverse-website/main/${img.replace('/thumbnails/', '/large/')}`;
+                    }
+                    return img;
+                });
+                updateContentImages('project', selectedImages);
+            } else {
+                document.getElementById('project-images-list').innerHTML = '';
+            }
         } else {
             // Add mode
             title.textContent = 'Add Project';
             form.reset();
+            document.getElementById('project-images-list').innerHTML = '';
         }
 
         modal.style.display = 'block';

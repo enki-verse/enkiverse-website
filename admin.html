@@ -80,6 +80,20 @@
                         <h3>Image Management</h3>
                         <div class="image-controls">
                             <input type="file" id="image-upload" multiple accept="image/*">
+                            <div class="assignment-options">
+                                <label for="image-assignment">Assign to:</label>
+                                <select id="image-assignment">
+                                    <option value="none">No assignment (general images)</option>
+                                    <option value="artist">Artist</option>
+                                    <option value="project">Project</option>
+                                    <option value="event">Event</option>
+                                </select>
+                                <div id="assignment-details" style="display: none;">
+                                    <select id="assignment-target">
+                                        <!-- Options will be populated based on assignment type -->
+                                    </select>
+                                </div>
+                            </div>
                             <button id="upload-images" class="upload-btn">Upload Images</button>
                             <button id="test-upload" class="upload-btn" style="background: #666;">Test Upload</button>
                         </div>
@@ -111,6 +125,25 @@
                         </form>
                     </div>
                 </div>
+            
+                <!-- Image Selection Modal -->
+                <div id="image-selection-modal" class="modal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>Select Images</h3>
+                            <button class="close-modal">&times;</button>
+                        </div>
+                        <div class="image-selection-container">
+                            <div class="image-gallery" id="image-gallery"></div>
+                            <div class="image-selection-actions">
+                                <button type="button" class="select-btn" id="confirm-image-selection">Select Images</button>
+                                <div class="selected-count">
+                                    <span id="selected-count">0</span> images selected
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </main>
@@ -135,6 +168,11 @@
                     <label for="artist-website">Website</label>
                     <input type="url" id="artist-website" name="website">
                 </div>
+                <div class="form-group">
+                    <label>Images</label>
+                    <div id="artist-images-list" class="images-list"></div>
+                    <button type="button" id="select-artist-images" class="secondary-btn" data-action="select-images" data-type="artist">Select Images</button>
+                </div>
                 <button type="submit" class="submit-btn">Save Artist</button>
             </form>
         </div>
@@ -157,8 +195,9 @@
                     <textarea id="project-description" name="description" rows="4" required></textarea>
                 </div>
                 <div class="form-group">
-                    <label for="project-images">Images (comma-separated filenames)</label>
-                    <input type="text" id="project-images" name="images" placeholder="image1.jpg, image2.jpg">
+                    <label>Images</label>
+                    <div id="project-images-list" class="images-list"></div>
+                    <button type="button" id="select-project-images" class="secondary-btn" data-action="select-images" data-type="project">Select Images</button>
                 </div>
                 <button type="submit" class="submit-btn">Save Project</button>
             </form>
