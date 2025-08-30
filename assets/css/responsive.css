@@ -13,6 +13,19 @@
     height: 3px;
     background-color: white;
     transition: all 0.3s ease;
+    transform-origin: center;
+}
+
+.nav-toggle.active span:nth-child(1) {
+    transform: rotate(45deg) translate(5px, 5px);
+}
+
+.nav-toggle.active span:nth-child(2) {
+    opacity: 0;
+}
+
+.nav-toggle.active span:nth-child(3) {
+    transform: rotate(-45deg) translate(7px, -6px);
 }
 
 /* Mobile Navigation */
@@ -35,8 +48,15 @@
         border-top: 1px solid #333;
     }
 
+    .nav-menu {
+        transform: translateY(-100%);
+        transition: transform 0.3s ease;
+        will-change: transform;
+    }
+
     .nav-menu.active {
         display: flex;
+        transform: translateY(0);
     }
 
     .nav-menu li {
@@ -48,6 +68,11 @@
         display: block;
         padding: 15px;
         width: 100%;
+        min-height: 44px;
+    }
+
+    .dropdown-menu a {
+        min-height: 44px;
     }
 
     .nav-admin {

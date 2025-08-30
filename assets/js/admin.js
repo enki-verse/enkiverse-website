@@ -156,6 +156,12 @@ function setupForms() {
         artistForm.addEventListener('submit', handleArtistFormSubmit);
     }
 
+    // Project form
+    const projectForm = document.getElementById('project-form');
+    if (projectForm) {
+        projectForm.addEventListener('submit', handleProjectFormSubmit);
+    }
+
     // Close modal buttons
     const closeModalBtns = document.querySelectorAll('.close-modal');
     closeModalBtns.forEach(btn => {
@@ -179,9 +185,42 @@ function setupForms() {
 function setupImageUpload() {
     const imageInput = document.getElementById('image-upload');
     const uploadBtn = document.getElementById('upload-images');
+    const testBtn = document.getElementById('test-upload');
 
     if (imageInput && uploadBtn) {
         uploadBtn.addEventListener('click', handleImageUpload);
+    }
+
+    if (testBtn) {
+        testBtn.addEventListener('click', handleTestUpload);
+    }
+}
+
+async function handleTestUpload() {
+    console.log('Starting test upload...');
+    const imagesTab = document.getElementById('images-tab');
+
+    try {
+        showMessage('Testing upload functionality...', 'info', imagesTab);
+
+        // Test basic file upload with a simple text file
+        const testContent = `Test file created at ${new Date().toISOString()}`;
+        const testPath = `test-files/test-${Date.now()}.txt`;
+        const testMessage = 'Test upload from admin panel';
+
+        console.log('Testing GitHub API call...');
+        const result = await window.githubApi.uploadBinaryFile(testPath, new Blob([testContent]), testMessage);
+        console.log('Test API result:', result);
+
+        if (result.success) {
+            showMessage('Test upload successful! Basic API working.', 'success', imagesTab);
+        } else {
+            showMessage(`Test upload failed: ${result.error}`, 'error', imagesTab);
+        }
+
+    } catch (error) {
+        console.error('Test upload error:', error);
+        showMessage(`Test upload error: ${error.message}`, 'error', imagesTab);
     }
 }
 
@@ -205,6 +244,16 @@ async function handleImageUpload() {
         }
     }
 
+    // Validate GitHub setup
+    console.log('Validating GitHub setup...');
+    const token = sessionStorage.getItem('enkiverse_github_token');
+    console.log('Token available:', !!token);
+
+    if (!token) {
+        showMessage('GitHub token not found. Please authenticate first.', 'error', imagesTab);
+        return;
+    }
+
     try {
         showMessage('Processing images...', 'info', imagesTab);
 
@@ -218,6 +267,10 @@ async function handleImageUpload() {
 
             const result = await uploadImageToGitHub(file);
             uploadResults.push({ file: file, success: result.success, path: result.path });
+
+            if (!result.success) {
+                console.error('Upload failed for', file.name, ':', result.error);
+            }
         }
 
         const successful = uploadResults.filter(r => r.success).length;
@@ -228,7 +281,7 @@ async function handleImageUpload() {
             // Refresh images display
             loadImages();
         } else {
-            showMessage('Failed to upload any images.', 'error', imagesTab);
+            showMessage('Failed to upload any images. Check console for details.', 'error', imagesTab);
         }
 
         // Clear input
@@ -236,48 +289,66 @@ async function handleImageUpload() {
 
     } catch (error) {
         console.error('Error handling image upload:', error);
+        console.error('Error stack:', error.stack);
         showMessage('An error occurred during upload. Please check console for details.', 'error', imagesTab);
     }
 }
 
 async function uploadImageToGitHub(file) {
     try {
+        console.log('Starting image upload for:', file.name, 'Size:', file.size);
+
         // Process the image using image-processor.js
+        console.log('Processing image...');
         const processedResult = await window.imageProcessor.processImage(file);
+        console.log('Processed result:', processedResult);
+
         if (!processedResult.success) {
+            console.error('Image processing failed:', processedResult.error);
             return { success: false, error: processedResult.error };
         }
 
         // Generate thumbnail
+        console.log('Generating thumbnail...');
         const thumbnailResult = await window.imageProcessor.generateThumbnail(processedResult.url);
+        console.log('Thumbnail result:', thumbnailResult);
 
         if (!thumbnailResult) {
+            console.error('Thumbnail generation failed');
             return { success: false, error: 'Failed to generate thumbnail' };
         }
 
         // Create filename with timestamp to avoid conflicts
         const timestamp = Date.now();
         const filename = `${timestamp}_${file.name}`;
+        console.log('Using filename:', filename);
 
         // Upload main image
         const mainImagePath = `assets/images/large/${filename}`;
+        console.log('Uploading main image to:', mainImagePath);
+
         const mainImageResult = await window.githubApi.uploadBinaryFile(
             mainImagePath,
             processedResult.processedBlob,
             `Admin: Uploaded image - ${file.name}`
         );
+        console.log('Main image upload result:', mainImageResult);
 
         if (!mainImageResult.success) {
-            return { success: false, error: 'Failed to upload main image' };
+            console.error('Main image upload failed:', mainImageResult.error);
+            return { success: false, error: `Failed to upload main image: ${mainImageResult.error}` };
         }
 
         // Upload thumbnail
         const thumbnailPath = `assets/images/thumbnails/${filename}`;
+        console.log('Uploading thumbnail to:', thumbnailPath);
+
         const thumbnailImageResult = await window.githubApi.uploadBinaryFile(
             thumbnailPath,
             thumbnailResult.blob,
             `Admin: Uploaded thumbnail - ${file.name}`
         );
+        console.log('Thumbnail upload result:', thumbnailImageResult);
 
         // Return success even if thumbnail fails (main image is more important)
         return {
@@ -288,7 +359,9 @@ async function uploadImageToGitHub(file) {
 
     } catch (error) {
         console.error('Error in uploadImageToGitHub:', error);
-        return { success: false, error: error.message };
+        console.error('Error details:', error.message);
+        console.error('Error stack:', error.stack);
+        return { success: false, error: `Upload failed: ${error.message}` };
     }
 }
 
@@ -484,13 +557,229 @@ function closeModal() {
     });
 }
 
-// Placeholder functions for other entities
-function showProjectModal() {
-    alert('Project modal not implemented yet');
+async function handleProjectFormSubmit(e) {
+    e.preventDefault();
+
+    const formData = new FormData(e.target);
+    const projectData = {
+        title: formData.get('title'),
+        description: formData.get('description'),
+        images: formData.get('images') ? formData.get('images').split(',').map(img => img.trim()) : [],
+        id: formData.get('id') || Date.now().toString()
+    };
+
+    try {
+        // Save project via GitHub API
+        const success = await saveProject(projectData);
+
+        if (success) {
+            // Close modal and refresh list
+            closeModal();
+            loadProjects();
+            showMessage('Project saved successfully!', 'success', document.getElementById('projects-tab'));
+        } else {
+            showMessage('Failed to save project. Please try again.', 'error', document.getElementById('projects-tab'));
+        }
+    } catch (error) {
+        console.error('Error saving project:', error);
+        showMessage('An error occurred while saving. Please check console for details.', 'error', document.getElementById('projects-tab'));
+    }
+}
+
+// Save project data to GitHub
+async function saveProject(newProject) {
+    try {
+        // Get current projects data
+        const response = await fetch('assets/data/projects.json');
+        const data = await response.json();
+        const projects = data.projects || [];
+
+        // Check if we're updating or creating
+        const existingIndex = projects.findIndex(project => project.id === newProject.id);
+
+        if (existingIndex >= 0) {
+            // Update existing project
+            projects[existingIndex] = { ...projects[existingIndex], ...newProject };
+        } else {
+            // Add new project
+            projects.push(newProject);
+        }
+
+        // Update the data
+        const updatedData = { ...data, projects: projects };
+        const jsonContent = JSON.stringify(updatedData, null, 2);
+
+        // Get current SHA of the file
+        const fileContent = await window.githubApi.getFileContent('assets/data/projects.json');
+        const fileSha = fileContent.success ? fileContent.sha : null;
+
+        // Commit message
+        const action = existingIndex >= 0 ? 'Updated' : 'Added';
+        const commitMessage = `Admin: ${action} project - ${newProject.title}`;
+
+        // Save to GitHub
+        const result = await window.githubApi.createOrUpdateFile(
+            'assets/data/projects.json',
+            jsonContent,
+            commitMessage,
+            fileSha
+        );
+
+        return result.success;
+
+    } catch (error) {
+        console.error('Error in saveProject:', error);
+        return false;
+    }
+}
+
+function showProjectModal(project = null) {
+    const modal = document.getElementById('project-modal');
+    const form = document.getElementById('project-form');
+    const title = document.getElementById('project-modal-title');
+
+    if (modal && form && title) {
+        if (project) {
+            // Edit mode
+            title.textContent = 'Edit Project';
+            form.querySelector('#project-title').value = project.title || '';
+            form.querySelector('#project-description').value = project.description || '';
+            form.querySelector('#project-images').value = project.images ? project.images.join(', ') : '';
+            // Add hidden input for ID
+            let idInput = form.querySelector('input[name="id"]');
+            if (!idInput) {
+                idInput = document.createElement('input');
+                idInput.type = 'hidden';
+                idInput.name = 'id';
+                form.appendChild(idInput);
+            }
+            idInput.value = project.id;
+        } else {
+            // Add mode
+            title.textContent = 'Add Project';
+            form.reset();
+        }
+
+        modal.style.display = 'block';
+    } else {
+        console.error('Project modal elements not found');
+        alert('Project modal not implemented yet');
+    }
 }
 
 function editProject(id) {
-    alert('Edit project not implemented yet');
+    // Find project by id and show modal
+    const projects = JSON.parse(sessionStorage.getItem('current_projects') || '[]');
+    const project = projects.find(p => p.id == id);
+    if (project) {
+        showProjectModal(project);
+    }
+}
+
+async function deleteProject(id) {
+    if (confirm('Are you sure you want to delete this project?')) {
+        try {
+            const success = await removeProjectFromGitHub(id);
+
+            if (success) {
+                showMessage('Project deleted successfully!', 'success', document.getElementById('projects-tab'));
+                loadProjects();
+            } else {
+                showMessage('Failed to delete project. Please try again.', 'error', document.getElementById('projects-tab'));
+            }
+        } catch (error) {
+            console.error('Error deleting project:', error);
+            showMessage('An error occurred while deleting. Please check console for details.', 'error', document.getElementById('projects-tab'));
+        }
+    }
+}
+
+async function removeProjectFromGitHub(projectId) {
+    try {
+        // Get current projects data
+        const response = await fetch('assets/data/projects.json');
+        const data = await response.json();
+        const projects = data.projects || [];
+
+        // Find and remove the project
+        const updatedProjects = projects.filter(project => project.id !== projectId);
+
+        // If no changes, project wasn't found
+        if (updatedProjects.length === projects.length) {
+            return false;
+        }
+
+        // Find project name for commit message
+        const deletedProject = projects.find(project => project.id === projectId);
+        const projectName = deletedProject ? deletedProject.title : 'Unknown project';
+
+        // Update the data
+        const updatedData = { ...data, projects: updatedProjects };
+        const jsonContent = JSON.stringify(updatedData, null, 2);
+
+        // Get current SHA of the file and commit
+        const fileSha = await getFileSha('assets/data/projects.json');
+        const commitMessage = `Admin: Deleted project - ${projectName}`;
+
+        const result = await window.githubApi.createOrUpdateFile(
+            'assets/data/projects.json',
+            jsonContent,
+            commitMessage,
+            fileSha
+        );
+
+        return result.success;
+
+    } catch (error) {
+        console.error('Error in removeProjectFromGitHub:', error);
+        return false;
+    }
+}
+
+function loadProjects() {
+    const response = fetch('assets/data/projects.json');
+    const data = response.then(r => r.json());
+    const projects = data.then(d => d.projects || []);
+
+    // Store projects data for editing
+    projects.then(p => sessionStorage.setItem('current_projects', JSON.stringify(p)));
+
+    renderProjectsList(projects).catch(error => console.error('Error loading projects:', error));
+}
+
+async function renderProjectsList(projectsPromise) {
+    const container = document.querySelector('#projects-tab .content-list');
+
+    try {
+        const projects = await projectsPromise;
+
+        if (projects.length === 0) {
+            container.innerHTML = '<div class="loading">No projects found. Click "Add Project" to get started.</div>';
+            return;
+        }
+
+        let html = '';
+        projects.forEach(project => {
+            html += `
+                <div class="project-item">
+                    <img src="assets/images/thumbnails/${project.images?.[0] || 'placeholder.jpg'}" alt="${project.title}" loading="lazy">
+                    <div class="project-info">
+                        <h4>${project.title}</h4>
+                        <p>${project.description || 'No description available'}</p>
+                    </div>
+                    <div class="content-actions">
+                        <button class="edit-btn" data-action="edit-project" data-id="${project.id}">Edit</button>
+                        <button class="delete-btn" data-action="delete-project" data-id="${project.id}">Delete</button>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    } catch (error) {
+        console.error('Error rendering projects:', error);
+        container.innerHTML = '<div class="loading error">Error loading projects.</div>';
+    }
 }
 
 function deleteProject(id) {
@@ -689,33 +978,6 @@ function renderArtistsList(artists) {
     container.innerHTML = html;
 }
 
-function renderProjectsList(projects) {
-    const container = document.querySelector('#projects-tab .content-list');
-
-    if (projects.length === 0) {
-        container.innerHTML = '<div class="loading">No projects found. Click "Add Project" to get started.</div>';
-        return;
-    }
-
-    let html = '';
-    projects.forEach(project => {
-        html += `
-            <div class="project-item">
-                <img src="assets/images/thumbnails/${project.images?.[0] || 'placeholder.jpg'}" alt="${project.title}" loading="lazy">
-                <div class="project-info">
-                    <h4>${project.title}</h4>
-                    <p>${project.description || 'No description available'}</p>
-                </div>
-                <div class="content-actions">
-                    <button class="edit-btn" data-action="edit-project" data-id="${project.id}">Edit</button>
-                    <button class="delete-btn" data-action="delete-project" data-id="${project.id}">Delete</button>
-                </div>
-            </div>
-        `;
-    });
-
-    container.innerHTML = html;
-}
 
 function renderEventsList(events) {
     const container = document.querySelector('#events-tab .content-list');

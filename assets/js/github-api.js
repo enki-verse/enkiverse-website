@@ -127,28 +127,52 @@ async function createOrUpdateFile(path, content, message, sha = null) {
 // Upload binary file (like images)
 async function uploadBinaryFile(path, fileContent, message) {
     try {
+        console.log('Converting file to base64...');
         // Convert file content to base64
         const base64Content = await blobToBase64(fileContent);
+        console.log('Base64 conversion complete, length:', base64Content.length);
+
+        const repoPath = getRepoPath();
+        console.log('Repo path:', repoPath);
+        console.log('Upload path:', path);
+        console.log('File size (base64):', base64Content.length * 0.75, 'bytes');
 
         const data = {
             message: message,
             content: base64Content
         };
 
-        const response = await githubApiCall(`/repos/${getRepoPath()}/contents/${path}`, {
+        const url = `/repos/${repoPath}/contents/${path}`;
+        console.log('API URL:', url);
+
+        const response = await githubApiCall(url, {
             method: 'PUT',
             body: JSON.stringify(data)
         });
 
+        console.log('Response status:', response.status);
+        console.log('Response headers:', [...response.headers.entries()]);
+
         const result = await response.json();
 
-        return {
-            success: true,
-            file: result.content,
-            commit: result.commit
-        };
+        if (response.ok) {
+            console.log('Upload successful');
+            return {
+                success: true,
+                file: result.content,
+                commit: result.commit
+            };
+        } else {
+            console.error('Upload failed with response:', result);
+            return {
+                success: false,
+                error: `GitHub API error: ${response.status} - ${result.message}`
+            };
+        }
     } catch (error) {
         console.error('Error uploading binary file:', error);
+        console.error('Error type:', error.constructor.name);
+        console.error('Error details:', error);
         return {
             success: false,
             error: error.message

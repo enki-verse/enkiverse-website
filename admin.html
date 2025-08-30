@@ -81,6 +81,7 @@
                         <div class="image-controls">
                             <input type="file" id="image-upload" multiple accept="image/*">
                             <button id="upload-images" class="upload-btn">Upload Images</button>
+                            <button id="test-upload" class="upload-btn" style="background: #666;">Test Upload</button>
                         </div>
                     </div>
                     <div id="images-grid" class="images-grid">
@@ -135,6 +136,31 @@
                     <input type="url" id="artist-website" name="website">
                 </div>
                 <button type="submit" class="submit-btn">Save Artist</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Project Modal -->
+    <div id="project-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="project-modal-title">Add Project</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <form id="project-form" action="#" method="post">
+                <div class="form-group">
+                    <label for="project-title">Title</label>
+                    <input type="text" id="project-title" name="title" required>
+                </div>
+                <div class="form-group">
+                    <label for="project-description">Description</label>
+                    <textarea id="project-description" name="description" rows="4" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="project-images">Images (comma-separated filenames)</label>
+                    <input type="text" id="project-images" name="images" placeholder="image1.jpg, image2.jpg">
+                </div>
+                <button type="submit" class="submit-btn">Save Project</button>
             </form>
         </div>
     </div>
