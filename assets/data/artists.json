@@ -5,7 +5,9 @@
       "name": "Ari zed",
       "bio": "Primary artist supported by ENKIVERSE Foundation",
       "website": "https://arized.art",
-      "images": [],
+      "images": [
+        "assets/images/thumbnails/1756560268861_Ari%20Zed%20profile%20pic.jpg"
+      ],
       "featured": true
     }
   ]
