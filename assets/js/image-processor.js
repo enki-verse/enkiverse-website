@@ -299,7 +299,8 @@ window.imageProcessor = {
     processImage,
     generateThumbnail,
     validateImage,
-    uploadImage
+    uploadImage,
+    formatFileSize
 };
 
 // Initialize on page load if needed
