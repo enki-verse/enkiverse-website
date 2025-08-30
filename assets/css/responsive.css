@@ -1,0 +1,309 @@
+/* ENKIVERSE Foundation - Responsive Styles */
+
+/* Mobile Navigation Toggle */
+.nav-toggle {
+    display: none;
+    flex-direction: column;
+    cursor: pointer;
+    gap: 4px;
+}
+
+.nav-toggle span {
+    width: 25px;
+    height: 3px;
+    background-color: white;
+    transition: all 0.3s ease;
+}
+
+/* Mobile Navigation */
+@media (max-width: 768px) {
+    .nav-toggle {
+        display: flex;
+    }
+
+    .nav-menu {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
+        background-color: #1a1a1a;
+        flex-direction: column;
+        gap: 0;
+        align-items: center;
+        padding: 20px 0;
+        border-top: 1px solid #333;
+    }
+
+    .nav-menu.active {
+        display: flex;
+    }
+
+    .nav-menu li {
+        width: 100%;
+        text-align: center;
+    }
+
+    .nav-menu a {
+        display: block;
+        padding: 15px;
+        width: 100%;
+    }
+
+    .nav-admin {
+        order: -1;
+        margin-bottom: 10px;
+    }
+
+    .logo {
+        order: -1;
+        margin-right: auto;
+    }
+
+    .nav-container {
+        position: relative;
+    }
+
+    /* Hero Responsive */
+    .hero-content h1 {
+        font-size: 2rem;
+        padding: 0 20px;
+    }
+
+    .hero-subtitle {
+        font-size: 1rem;
+        padding: 0 10px;
+    }
+
+    .core-values {
+        flex-direction: column;
+        gap: 15px;
+        margin-bottom: 30px;
+    }
+
+    .core-values .value {
+        padding: 10px 20px;
+        font-size: 1rem;
+    }
+
+    .cta-button {
+        padding: 12px 30px;
+        font-size: 1rem;
+    }
+
+    /* Page Hero */
+    .page-hero {
+        padding: 60px 0 40px;
+    }
+
+    .page-hero h1 {
+        font-size: 1.8rem;
+        padding: 0 20px;
+    }
+
+    .page-hero p {
+        font-size: 1rem;
+        padding: 0 20px;
+    }
+
+    /* Grid Layouts */
+    .mission-points {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .artist-spotlight {
+        flex-direction: column;
+        text-align: center;
+        gap: 20px;
+    }
+
+    .artist-image img {
+        width: 150px;
+        height: 150px;
+    }
+
+    /* Content Grids */
+    .vision-grid {
+        display: block !important;
+    }
+
+    .vision-grid > div {
+        margin: 20px 0;
+    }
+
+    .initiatives-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Contact */
+    .contact-grid {
+        display: block !important;
+    }
+
+    .signup-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .signup-form-full {
+        max-width: 100%;
+    }
+
+    .signup-form-full .form-group {
+        margin-bottom: 15px;
+    }
+
+    /* Footer */
+    .footer-grid {
+        grid-template-columns: 1fr !important;
+        gap: 20px;
+    }
+
+    /* Admin Panel */
+    .admin-tabs {
+        flex-direction: column;
+    }
+
+    .admin-content {
+        margin-top: 20px;
+    }
+}
+
+/* Tablets */
+@media (max-width: 1024px) and (min-width: 769px) {
+    .nav-container {
+        padding: 0 15px;
+    }
+
+    .nav-menu {
+        gap: 20px;
+    }
+
+    .hero-content h1 {
+        font-size: 2.5rem;
+    }
+
+    .core-values {
+        gap: 30px;
+    }
+
+    .mission-points {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .initiatives-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .footer-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    .vision-grid {
+        display: block !important;
+    }
+
+    .vision-grid > div {
+        margin: 20px 0;
+    }
+}
+
+/* Small Devices */
+@media (max-width: 480px) {
+    .container {
+        padding: 0 15px;
+    }
+
+    .hero-content h1 {
+        font-size: 1.8rem;
+    }
+
+    .hero-subtitle {
+        font-size: 0.9rem;
+    }
+
+    .core-values {
+        gap: 10px;
+    }
+
+    .core-values .value {
+        padding: 8px 15px;
+        font-size: 0.9rem;
+    }
+
+    .cta-button {
+        padding: 10px 25px;
+        font-size: 0.9rem;
+    }
+
+    .page-hero h1 {
+        font-size: 1.6rem;
+    }
+
+    .mission-card {
+        padding: 20px;
+    }
+
+    .footer-section {
+        text-align: center;
+    }
+}
+
+/* Large Screens */
+@media (min-width: 1200px) {
+    .container {
+        padding: 0 40px;
+    }
+
+    .hero-content h1 {
+        font-size: 3.5rem;
+    }
+
+    .hero-subtitle {
+        font-size: 1.4rem;
+    }
+
+    .mission-points {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .initiatives-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Print Styles */
+@media print {
+    header nav,
+    .email-signup,
+    .nav-admin,
+    .cta-button {
+        display: none;
+    }
+
+    main {
+        padding-top: 0;
+    }
+
+    .hero {
+        background: white !important;
+        color: black !important;
+        padding: 40px 0;
+    }
+
+    body {
+        background: white !important;
+    }
+
+    .mission,
+    .featured-artist {
+        background: white !important;
+    }
+
+    .mission-card,
+    .artist-spotlight {
+        box-shadow: none !important;
+        border: 1px solid #ddd;
+    }
+}

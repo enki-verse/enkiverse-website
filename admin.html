@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - ENKIVERSE Foundation</title>
+    <meta name="description" content="Admin panel for managing ENKIVERSE Foundation content and operations.">
+    <link rel="icon" href="assets/images/small white on black ENKIVERSE logo.png" type="image/png">
+    <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="stylesheet" href="assets/css/admin.css">
+    <link rel="stylesheet" href="assets/css/responsive.css">
+    <script crossorigin="anonymous" src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+</head>
+<body>
+    <div id="login-overlay" class="login-overlay">
+        <div class="login-form">
+            <h2>Admin Login</h2>
+            <form id="admin-login" action="#" method="post">
+                <div class="form-group">
+                    <label for="github-token">GitHub Personal Access Token</label>
+                    <input type="password" id="github-token" name="token" placeholder="Enter GitHub token" required>
+                    <small>A properly configured GitHub token with repo permissions is required for admin access.</small>
+                </div>
+                <button type="submit" class="submit-btn">Authenticate</button>
+            </form>
+        </div>
+    </div>
+
+    <header>
+        <div id="nav-placeholder"></div>
+    </header>
+
+    <main class="admin-main">
+        <div class="admin-container">
+            <div class="admin-tabs">
+                <button class="tab-btn active" data-tab="artists">Artists</button>
+                <button class="tab-btn" data-tab="projects">Projects</button>
+                <button class="tab-btn" data-tab="events">Events</button>
+                <button class="tab-btn" data-tab="images">Images</button>
+                <button class="tab-btn" data-tab="settings">Settings</button>
+            </div>
+
+            <div class="admin-content">
+                <!-- Artists Tab -->
+                <div id="artists-tab" class="tab-content active">
+                    <div class="tab-header">
+                        <h3>Manage Artists</h3>
+                        <button class="add-btn" data-action="add-artist">Add Artist</button>
+                    </div>
+                    <div id="artists-list" class="content-list">
+                        <!-- Artists will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Projects Tab -->
+                <div id="projects-tab" class="tab-content">
+                    <div class="tab-header">
+                        <h3>Manage Projects</h3>
+                        <button class="add-btn" data-action="add-project">Add Project</button>
+                    </div>
+                    <div id="projects-list" class="content-list">
+                        <!-- Projects will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Events Tab -->
+                <div id="events-tab" class="tab-content">
+                    <div class="tab-header">
+                        <h3>Manage Events</h3>
+                        <button class="add-btn" data-action="add-event">Add Event</button>
+                    </div>
+                    <div id="events-list" class="content-list">
+                        <!-- Events will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Images Tab -->
+                <div id="images-tab" class="tab-content">
+                    <div class="tab-header">
+                        <h3>Image Management</h3>
+                        <div class="image-controls">
+                            <input type="file" id="image-upload" multiple accept="image/*">
+                            <button id="upload-images" class="upload-btn">Upload Images</button>
+                        </div>
+                    </div>
+                    <div id="images-grid" class="images-grid">
+                        <!-- Images will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Settings Tab -->
+                <div id="settings-tab" class="tab-content">
+                    <div class="tab-header">
+                        <h3>Site Settings</h3>
+                    </div>
+                    <div class="settings-content">
+                        <form id="site-settings" action="#" method="post">
+                            <div class="form-section">
+                                <h4>GitHub Configuration</h4>
+                                <div class="form-group">
+                                    <label for="repo-owner">Repository Owner</label>
+                                    <input type="text" id="repo-owner" name="repoOwner" placeholder="enki-verse" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label for="repo-name">Repository Name</label>
+                                    <input type="text" id="repo-name" name="repoName" placeholder="enkiverse-website" readonly>
+                                </div>
+                            </div>
+                            <button type="submit" class="submit-btn">Update Settings</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modals for editing -->
+    <div id="artist-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="artist-modal-title">Add Artist</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <form id="artist-form" action="#" method="post">
+                <div class="form-group">
+                    <label for="artist-name">Name</label>
+                    <input type="text" id="artist-name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="artist-bio">Bio</label>
+                    <textarea id="artist-bio" name="bio" rows="4" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="artist-website">Website</label>
+                    <input type="url" id="artist-website" name="website">
+                </div>
+                <button type="submit" class="submit-btn">Save Artist</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="assets/js/main.js"></script>
+    <script src="assets/js/admin.js"></script>
+    <script src="assets/js/image-processor.js"></script>
+    <script src="assets/js/github-api.js"></script>
+    <script src="assets/js/nav-loader.js"></script>
+</body>
+</html>

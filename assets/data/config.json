@@ -1,0 +1,14 @@
+{
+  "site": {
+    "title": "ENKIVERSE Foundation",
+    "description": "Promoting freedom, fertility, and creativity through artistic and cultural initiatives",
+    "url": "https://enki-verse.com",
+    "github": {
+      "repo": "enki-verse/enkiverse-website",
+      "apiBase": "https://api.github.com"
+    }
+  },
+  "contact": {
+    "email": "contact@enki-verse.com"
+  }
+}

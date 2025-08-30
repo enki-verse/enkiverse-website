@@ -1,0 +1,12 @@
+{
+  "projects": [
+    {
+      "id": "great-i-am",
+      "title": "The Great I Am",
+      "description": "Project description here",
+      "status": "active",
+      "images": ["project1_hero.jpg"],
+      "timeline": "2024-2025"
+    }
+  ]
+}
