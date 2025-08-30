@@ -541,11 +541,17 @@ function confirmImageSelection() {
         return;
     }
 
+    console.log('Confirming image selection for:', currentImageSelectionType);
+    console.log('Selected images:', selectedImages);
+
     // Update the appropriate form's image list
     updateContentImages(currentImageSelectionType, selectedImages);
 
-    // Close modal
-    closeModal();
+    // Only close the image selection modal, not ALL modals
+    const imageModal = document.getElementById('image-selection-modal');
+    if (imageModal) {
+        imageModal.style.display = 'none';
+    }
 
     // Clear selection
     selectedImages = [];
@@ -997,7 +1003,30 @@ async function removeArtistFromGitHub(artistId) {
     }
 }
 
-function closeModal() {
+function closeModal(e) {
+    // If called from an event (like click), get the target
+    if (e && e.target) {
+        const clickedElement = e.target;
+
+        // If clicking on a close button
+        if (clickedElement.classList.contains('close-modal')) {
+            // Find the parent modal and close only that one
+            const parentModal = clickedElement.closest('.modal');
+            if (parentModal) {
+                parentModal.style.display = 'none';
+                return;
+            }
+        }
+
+        // If clicking on the modal backdrop (but not on modal content)
+        if (clickedElement.classList.contains('modal') &&
+           !clickedElement.classList.contains('modal-content')) {
+            clickedElement.style.display = 'none';
+            return;
+        }
+    }
+
+    // Fallback: close all modals
     const modals = document.querySelectorAll('.modal');
     modals.forEach(modal => {
         modal.style.display = 'none';
