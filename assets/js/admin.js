@@ -640,7 +640,13 @@ async function getImagesList() {
     } catch (error) {
         console.error('Error getting images list:', error);
 
-        // If API fails, try to load locally (fallback)
+        // If directory doesn't exist (404 error), it means no images have been uploaded yet
+        if (error.message && error.message.includes('404')) {
+            console.log('Thumbnails directory does not exist - no images uploaded yet');
+            return [];
+        }
+
+        // If API fails for other reasons, try to load locally (fallback)
         if (error.message.includes('fetch')) {
             return await getLocalImagesList();
         }
