@@ -153,10 +153,26 @@ function handleButtonClick(e) {
 }
 
 function setupForms() {
+    console.log('=== setupForms called ===');
+
     // Artist form
     const artistForm = document.getElementById('artist-form');
+    console.log('Artist form found:', !!artistForm);
+
     if (artistForm) {
-        artistForm.addEventListener('submit', handleArtistFormSubmit);
+        console.log('Setting up artist form submit handler');
+        const success = artistForm.addEventListener('submit', handleArtistFormSubmit);
+        console.log('Event listener added:', success);
+        artistForm.setAttribute('data-submit-attached', 'true');
+
+        // Add test button handler
+        const testBtn = document.getElementById('test-form-submit');
+        if (testBtn) {
+            testBtn.addEventListener('click', () => {
+                console.log('Test button clicked - manually calling handler');
+                handleArtistFormSubmit({ preventDefault: () => {}, stopPropagation: () => {} });
+            });
+        }
     }
 
     // Project form
@@ -738,9 +754,10 @@ async function uploadImageToGitHub(file) {
 }
 
 async function handleArtistFormSubmit(e) {
-    e.preventDefault();
-
     console.log('=== ARTIST FORM SUBMIT START ===');
+    console.log('Form submit event triggered');
+
+    e.preventDefault();
 
     const formData = new FormData(e.target);
     const imagesFromDisplay = getImagesFromDisplay('artist');
@@ -880,6 +897,13 @@ function showArtistModal(artist = null) {
             form.appendChild(idInput);
         }
         idInput.value = artist.id;
+
+        // Make sure form submit handler is attached
+        if (!form.hasAttribute('data-submit-attached')) {
+            console.log('Attaching form submit handler');
+            form.addEventListener('submit', handleArtistFormSubmit);
+            form.setAttribute('data-submit-attached', 'true');
+        }
 
         // Display existing images
         if (artist.images && artist.images.length > 0) {
