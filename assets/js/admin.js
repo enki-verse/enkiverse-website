@@ -91,6 +91,9 @@ function setupAdminInterface() {
     // Setup form submissions
     setupForms();
 
+    // Setup image upload functionality
+    setupImageUpload();
+
     // Logout functionality
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
@@ -105,6 +108,7 @@ function handleButtonClick(e) {
     const target = e.target;
     const action = target.dataset.action;
     const id = target.dataset.id;
+    const path = target.dataset.path;
     const tab = target.closest('.tab-content')?.id?.replace('-tab', '');
 
     if (!action) return;
@@ -137,6 +141,9 @@ function handleButtonClick(e) {
         case 'delete-event':
             if (id) deleteEvent(id);
             break;
+        case 'delete-image':
+            if (path) deleteImage(path);
+            break;
         default:
             console.log('Unknown action:', action);
     }
@@ -156,6 +163,12 @@ function setupForms() {
     });
 
     // Click outside modal to close
+    // Setup image upload
+    const uploadBtn = document.getElementById('upload-images');
+    if (uploadBtn) {
+        uploadBtn.addEventListener('click', handleImageUpload);
+    }
+
     document.addEventListener('click', function(e) {
         if (e.target.classList.contains('modal')) {
             closeModal();
@@ -163,7 +176,123 @@ function setupForms() {
     });
 }
 
-function handleArtistFormSubmit(e) {
+function setupImageUpload() {
+    const imageInput = document.getElementById('image-upload');
+    const uploadBtn = document.getElementById('upload-images');
+
+    if (imageInput && uploadBtn) {
+        uploadBtn.addEventListener('click', handleImageUpload);
+    }
+}
+
+async function handleImageUpload() {
+    const imageInput = document.getElementById('image-upload');
+    const imagesTab = document.getElementById('images-tab');
+
+    if (!imageInput.files || imageInput.files.length === 0) {
+        showMessage('Please select image files to upload.', 'error', imagesTab);
+        return;
+    }
+
+    const files = Array.from(imageInput.files);
+
+    // Validate all files first
+    for (let file of files) {
+        const validation = window.imageProcessor.validateImage(file);
+        if (!validation.valid) {
+            showMessage(`Invalid file ${file.name}: ${validation.errors.join(', ')}`, 'error', imagesTab);
+            return;
+        }
+    }
+
+    try {
+        showMessage('Processing images...', 'info', imagesTab);
+
+        const uploadResults = [];
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const progress = (i + 1) / files.length * 100;
+
+            showMessage(`Uploading image ${i + 1} of ${files.length}... (${progress.toFixed(0)}%)`, 'info', imagesTab);
+
+            const result = await uploadImageToGitHub(file);
+            uploadResults.push({ file: file, success: result.success, path: result.path });
+        }
+
+        const successful = uploadResults.filter(r => r.success).length;
+        const total = files.length;
+
+        if (successful > 0) {
+            showMessage(`Successfully uploaded ${successful} of ${total} images.`, 'success', imagesTab);
+            // Refresh images display
+            loadImages();
+        } else {
+            showMessage('Failed to upload any images.', 'error', imagesTab);
+        }
+
+        // Clear input
+        imageInput.value = '';
+
+    } catch (error) {
+        console.error('Error handling image upload:', error);
+        showMessage('An error occurred during upload. Please check console for details.', 'error', imagesTab);
+    }
+}
+
+async function uploadImageToGitHub(file) {
+    try {
+        // Process the image using image-processor.js
+        const processedResult = await window.imageProcessor.processImage(file);
+        if (!processedResult.success) {
+            return { success: false, error: processedResult.error };
+        }
+
+        // Generate thumbnail
+        const thumbnailResult = await window.imageProcessor.generateThumbnail(processedResult.url);
+
+        if (!thumbnailResult) {
+            return { success: false, error: 'Failed to generate thumbnail' };
+        }
+
+        // Create filename with timestamp to avoid conflicts
+        const timestamp = Date.now();
+        const filename = `${timestamp}_${file.name}`;
+
+        // Upload main image
+        const mainImagePath = `assets/images/large/${filename}`;
+        const mainImageResult = await window.githubApi.uploadBinaryFile(
+            mainImagePath,
+            processedResult.processedBlob,
+            `Admin: Uploaded image - ${file.name}`
+        );
+
+        if (!mainImageResult.success) {
+            return { success: false, error: 'Failed to upload main image' };
+        }
+
+        // Upload thumbnail
+        const thumbnailPath = `assets/images/thumbnails/${filename}`;
+        const thumbnailImageResult = await window.githubApi.uploadBinaryFile(
+            thumbnailPath,
+            thumbnailResult.blob,
+            `Admin: Uploaded thumbnail - ${file.name}`
+        );
+
+        // Return success even if thumbnail fails (main image is more important)
+        return {
+            success: mainImageResult.success,
+            path: mainImagePath,
+            thumbnailPath: thumbnailPath
+        };
+
+    } catch (error) {
+        console.error('Error in uploadImageToGitHub:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+async function handleArtistFormSubmit(e) {
     e.preventDefault();
 
     const formData = new FormData(e.target);
@@ -174,14 +303,80 @@ function handleArtistFormSubmit(e) {
         id: formData.get('id') || Date.now().toString()
     };
 
-    // Here you would call a function to save the artist via GitHub API
-    console.log('Artist data:', artistData);
+    try {
+        // Save artist via GitHub API
+        const success = await saveArtist(artistData);
 
-    // Close modal and refresh list
-    closeModal();
-    loadArtists();
+        if (success) {
+            // Close modal and refresh list
+            closeModal();
+            loadArtists();
+            showMessage('Artist saved successfully!', 'success', document.getElementById('artists-tab'));
+        } else {
+            showMessage('Failed to save artist. Please try again.', 'error', document.getElementById('artists-tab'));
+        }
+    } catch (error) {
+        console.error('Error saving artist:', error);
+        showMessage('An error occurred while saving. Please check console for details.', 'error', document.getElementById('artists-tab'));
+    }
+}
 
-    showMessage('Artist saved successfully!', 'success', document.getElementById('artists-tab'));
+// Save artist data to GitHub
+async function saveArtist(newArtist) {
+    try {
+        // Get current artists data
+        const response = await fetch('assets/data/artists.json');
+        const data = await response.json();
+        const artists = data.artists || [];
+
+        // Check if we're updating or creating
+        const existingIndex = artists.findIndex(artist => artist.id === newArtist.id);
+
+        if (existingIndex >= 0) {
+            // Update existing artist
+            artists[existingIndex] = { ...artists[existingIndex], ...newArtist };
+        } else {
+            // Add new artist
+            artists.push(newArtist);
+        }
+
+        // Update the data
+        const updatedData = { ...data, artists: artists };
+        const jsonContent = JSON.stringify(updatedData, null, 2);
+
+        // Get current SHA of the file
+        const fileContent = await window.githubApi.getFileContent('assets/data/artists.json');
+        const fileSha = fileContent.success ? fileContent.sha : null;
+
+        // Commit message
+        const action = existingIndex >= 0 ? 'Updated' : 'Added';
+        const commitMessage = `Admin: ${action} artist - ${newArtist.name}`;
+
+        // Save to GitHub
+        const result = await window.githubApi.createOrUpdateFile(
+            'assets/data/artists.json',
+            jsonContent,
+            commitMessage,
+            fileSha
+        );
+
+        return result.success;
+
+    } catch (error) {
+        console.error('Error in saveArtist:', error);
+        return false;
+    }
+}
+
+// Helper to get file SHA for updates
+async function getFileSha(path) {
+    try {
+        const result = await window.githubApi.getFileContent(path);
+        return result.success ? result.sha : null;
+    } catch (error) {
+        console.error('Error getting file SHA:', error);
+        return null;
+    }
 }
 
 function showArtistModal(artist = null) {
@@ -222,12 +417,63 @@ function editArtist(id) {
     }
 }
 
-function deleteArtist(id) {
+async function deleteArtist(id) {
     if (confirm('Are you sure you want to delete this artist?')) {
-        console.log('Deleting artist:', id);
-        // Here you would call a function to delete via GitHub API
-        showMessage('Artist deleted successfully!', 'success', document.getElementById('artists-tab'));
-        loadArtists();
+        try {
+            const success = await removeArtistFromGitHub(id);
+
+            if (success) {
+                showMessage('Artist deleted successfully!', 'success', document.getElementById('artists-tab'));
+                loadArtists();
+            } else {
+                showMessage('Failed to delete artist. Please try again.', 'error', document.getElementById('artists-tab'));
+            }
+        } catch (error) {
+            console.error('Error deleting artist:', error);
+            showMessage('An error occurred while deleting. Please check console for details.', 'error', document.getElementById('artists-tab'));
+        }
+    }
+}
+
+async function removeArtistFromGitHub(artistId) {
+    try {
+        // Get current artists data
+        const response = await fetch('assets/data/artists.json');
+        const data = await response.json();
+        const artists = data.artists || [];
+
+        // Find and remove the artist
+        const updatedArtists = artists.filter(artist => artist.id !== artistId);
+
+        // If no changes, artist wasn't found
+        if (updatedArtists.length === artists.length) {
+            return false;
+        }
+
+        // Find artist name for commit message
+        const deletedArtist = artists.find(artist => artist.id === artistId);
+        const artistName = deletedArtist ? deletedArtist.name : 'Unknown artist';
+
+        // Update the data
+        const updatedData = { ...data, artists: updatedArtists };
+        const jsonContent = JSON.stringify(updatedData, null, 2);
+
+        // Get current SHA of the file and commit
+        const fileSha = await getFileSha('assets/data/artists.json');
+        const commitMessage = `Admin: Deleted artist - ${artistName}`;
+
+        const result = await window.githubApi.createOrUpdateFile(
+            'assets/data/artists.json',
+            jsonContent,
+            commitMessage,
+            fileSha
+        );
+
+        return result.success;
+
+    } catch (error) {
+        console.error('Error in removeArtistFromGitHub:', error);
+        return false;
     }
 }
 
@@ -331,11 +577,82 @@ async function loadEvents() {
 }
 
 async function loadImages() {
-    // Placeholder for image management
     const imagesContainer = document.getElementById('images-grid');
-    if (imagesContainer) {
-        imagesContainer.innerHTML = '<div class="loading">Image management coming soon...</div>';
+    if (!imagesContainer) return;
+
+    imagesContainer.innerHTML = '<div class="loading">Loading images...</div>';
+
+    try {
+        // Get list of images from the thumbnails directory
+        const imagesList = await getImagesList();
+
+        if (imagesList.length === 0) {
+            imagesContainer.innerHTML = '<div class="loading">No images found. Upload some images to get started.</div>';
+            return;
+        }
+
+        let html = '';
+        imagesList.forEach(image => {
+            html += `
+                <div class="image-item">
+                    <img src="${image.thumbnailUrl}" alt="${image.name}" loading="lazy">
+                    <div class="image-info">
+                        <p>${image.name}</p>
+                        <small>${image.size}</small>
+                    </div>
+                    <div class="image-actions">
+                        <button class="delete-btn" data-action="delete-image" data-path="${image.path}">Delete</button>
+                    </div>
+                </div>
+            `;
+        });
+
+        imagesContainer.innerHTML = html;
+
+    } catch (error) {
+        console.error('Error loading images:', error);
+        imagesContainer.innerHTML = '<div class="loading error">Failed to load images. Please check your connection.</div>';
     }
+}
+
+async function getImagesList() {
+    try {
+        // Use GitHub API to get contents of thumbnails directory
+        const response = await window.githubApi.githubApiCall(`/repos/${window.githubApi.getRepoPath()}/contents/assets/images/thumbnails`);
+        const data = await response.json();
+
+        // Filter only image files
+        const images = data.filter(item => {
+            if (item.type !== 'file') return false;
+            const ext = item.name.toLowerCase().split('.').pop();
+            return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
+        });
+
+        return images.map(item => ({
+            name: item.name,
+            path: item.path,
+            thumbnailUrl: `https://raw.githubusercontent.com/${window.githubApi.getRepoPath()}/main/${item.path}`,
+            fullUrl: `https://raw.githubusercontent.com/${window.githubApi.getRepoPath()}/main/assets/images/large/${item.name}`,
+            size: window.imageProcessor.formatFileSize(item.size),
+            sha: item.sha
+        }));
+
+    } catch (error) {
+        console.error('Error getting images list:', error);
+
+        // If API fails, try to load locally (fallback)
+        if (error.message.includes('fetch')) {
+            return await getLocalImagesList();
+        }
+
+        return [];
+    }
+}
+
+async function getLocalImagesList() {
+    // Fallback - list what's available locally
+    // This is a simplified version, in real implementation you'd scan the directory
+    return [];
 }
 
 function renderArtistsList(artists) {
@@ -433,4 +750,65 @@ function showMessage(message, type, container) {
             messageDiv.remove();
         }
     }, 5000);
+}
+
+async function deleteImage(imagePath) {
+    if (confirm('Are you sure you want to delete this image? This cannot be undone.')) {
+        try {
+            showMessage('Deleting image...', 'info', document.getElementById('images-tab'));
+
+            // Get filename from path
+            const filename = imagePath.split('/').pop();
+
+            // Delete thumbnail
+            const thumbnailPath = imagePath;
+            let thumbnailSuccess = true;
+            try {
+                const thumbnailSha = await getFileSha(thumbnailPath);
+                if (thumbnailSha) {
+                    await window.githubApi.githubApiCall(`/repos/${window.githubApi.getRepoPath()}/contents/${thumbnailPath}`, {
+                        method: 'DELETE',
+                        body: JSON.stringify({
+                            message: `Admin: Deleted image thumbnail - ${filename}`,
+                            sha: thumbnailSha
+                        })
+                    });
+                }
+            } catch (error) {
+                console.error('Error deleting thumbnail:', error);
+                thumbnailSuccess = false;
+            }
+
+            // Delete full image
+            const fullImagePath = `assets/images/large/${filename}`;
+            let fullImageSuccess = true;
+            try {
+                const fullImageSha = await getFileSha(fullImagePath);
+                if (fullImageSha) {
+                    await window.githubApi.githubApiCall(`/repos/${window.githubApi.getRepoPath()}/contents/${fullImagePath}`, {
+                        method: 'DELETE',
+                        body: JSON.stringify({
+                            message: `Admin: Deleted full image - ${filename}`,
+                            sha: fullImageSha
+                        })
+                    });
+                }
+            } catch (error) {
+                console.error('Error deleting full image:', error);
+                fullImageSuccess = false;
+            }
+
+            if (thumbnailSuccess || fullImageSuccess) {
+                showMessage('Image deleted successfully!', 'success', document.getElementById('images-tab'));
+                // Refresh images display
+                loadImages();
+            } else {
+                showMessage('Failed to delete image. Please try again.', 'error', document.getElementById('images-tab'));
+            }
+
+        } catch (error) {
+            console.error('Error in deleteImage:', error);
+            showMessage('An error occurred while deleting. Please check console for details.', 'error', document.getElementById('images-tab'));
+        }
+    }
 }

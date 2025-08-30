@@ -297,10 +297,27 @@ function generateCommitMessage(action, details = '') {
     return `[ENKIVERSE Admin] ${action} - ${timestamp}${details ? ` - ${details}` : ''}`;
 }
 
+// Expose functions globally for admin.js usage
+window.githubApi = {
+    setAuthToken,
+    getAuthToken,
+    authenticateGitHub,
+    githubApiCall,
+    fileExists,
+    getRepoPath,
+    createOrUpdateFile,
+    uploadBinaryFile,
+    getFileContent,
+    createCommit,
+    getRepositoryInfo,
+    validateTokenPermissions,
+    generateCommitMessage
+};
+
 // Initialize token from session on page load
 document.addEventListener('DOMContentLoaded', function() {
     const storedToken = sessionStorage.getItem('enkiverse_github_token');
     if (storedToken) {
-        currentToken = storedToken;
+        setAuthToken(storedToken);
     }
 });

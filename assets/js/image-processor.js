@@ -244,6 +244,14 @@ function getImageDimensions(file) {
     });
 }
 
+// Expose functions globally for admin.js usage
+window.imageProcessor = {
+    processImage,
+    generateThumbnail,
+    validateImage,
+    uploadImage
+};
+
 // Initialize on page load if needed
 document.addEventListener('DOMContentLoaded', function() {
     // Only initialize if we have image processing elements on the page
