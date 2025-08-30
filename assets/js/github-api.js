@@ -95,28 +95,58 @@ function getRepoPath() {
 
 // Create or update a file in the repository
 async function createOrUpdateFile(path, content, message, sha = null) {
+    console.log('=== GitHub API createOrUpdateFile START ===');
+    console.log('Path:', path);
+    console.log('Content length:', content ? content.length : 'NO CONTENT');
+    console.log('Message:', message);
+    console.log('SHA:', sha);
+
     const data = {
         message: message,
         content: btoa(unescape(encodeURIComponent(content))), // Base64 encode with UTF-8 support
         sha: sha // Only needed for updates
     };
 
+    console.log('Data to send:', { message, sha, contentLength: data.content.length });
+
     try {
         const method = sha ? 'PUT' : 'PUT'; // Both create and update use PUT
-        const response = await githubApiCall(`/repos/${getRepoPath()}/contents/${path}`, {
+        console.log('HTTP method:', method);
+
+        const apiUrl = `/repos/${getRepoPath()}/contents/${path}`;
+        console.log('API URL:', apiUrl);
+
+        const response = await githubApiCall(apiUrl, {
             method: method,
             body: JSON.stringify(data)
         });
 
-        const result = await response.json();
+        console.log('API response status:', response.status);
+        console.log('API response ok:', response.ok);
 
-        return {
-            success: true,
-            file: result.content,
-            commit: result.commit
-        };
+        const result = await response.json();
+        console.log('API response result:', result);
+
+        if (response.ok) {
+            console.log('SUCCESS: File created/updated');
+            console.log('=== GitHub API createOrUpdateFile END (SUCCESS) ===');
+            return {
+                success: true,
+                file: result.content,
+                commit: result.commit
+            };
+        } else {
+            console.log('FAILURE: API returned non-200 status');
+            console.log('Error message:', result.message);
+            console.log('=== GitHub API createOrUpdateFile END (FAILURE) ===');
+            return {
+                success: false,
+                error: `GitHub API error: ${result.message}`
+            };
+        }
     } catch (error) {
-        console.error('Error creating/updating file:', error);
+        console.error('ERROR: Exception in createOrUpdateFile:', error);
+        console.log('=== GitHub API createOrUpdateFile END (ERROR) ===');
         return {
             success: false,
             error: error.message

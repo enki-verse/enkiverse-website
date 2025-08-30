@@ -378,36 +378,55 @@ let selectedImages = [];
 
 // Helper function to get images from the visual display
 function getImagesFromDisplay(contentType) {
+    console.log('=== getImagesFromDisplay START for', contentType);
     const imageListId = `${contentType}-images-list`;
     const container = document.getElementById(imageListId);
 
-    if (!container) return [];
+    if (!container) {
+        console.log('Container not found:', imageListId);
+        return [];
+    }
 
     // Get all selected images from the display
     const imageDivs = container.querySelectorAll('.selected-image');
+    console.log('Found image divs:', imageDivs.length);
+
     const images = Array.from(imageDivs).map(div => {
         const img = div.querySelector('img');
+        console.log('Processing image div, img element found:', !!img);
         if (img && img.src) {
+            console.log('Image src:', img.src);
             if (img.src.includes('raw.githubusercontent.com')) {
                 // Convert from full GitHub URL to local path for saving
                 const url = new URL(img.src);
                 const path = url.pathname;
+                console.log('Parsed URL path:', path);
                 // Path is like /enki-verse/enkiverse-website/main/assets/images/large/1234567890_image.jpg
                 // We want to save as: assets/images/thumbnails/1234567890_image.jpg
                 const pathParts = path.split('/');
+                console.log('Path parts:', pathParts);
                 if (pathParts.length >= 6) {
                     const filename = pathParts[pathParts.length - 1]; // Get filename from end
-                    return `assets/images/thumbnails/${filename}`;
+                    const result = `assets/images/thumbnails/${filename}`;
+                    console.log('Converted path:', result);
+                    return result;
+                } else {
+                    console.log('Path too short, unable to extract filename');
                 }
             } else {
                 // Already a local path, ensure it's thumbnail path
-                return img.src.replace('/large/', '/thumbnails/');
+                const result = img.src.replace('/large/', '/thumbnails/');
+                console.log('Local path converted:', result);
+                return result;
             }
+        } else {
+            console.log('No img element or no src found');
         }
         return null;
     }).filter(img => img !== null);
 
-    console.log('Images from display for', contentType, ':', images);
+    console.log('Final images from display for', contentType, ':', images);
+    console.log('=== getImagesFromDisplay END ===');
     return images;
 }
 
@@ -721,25 +740,37 @@ async function uploadImageToGitHub(file) {
 async function handleArtistFormSubmit(e) {
     e.preventDefault();
 
+    console.log('=== ARTIST FORM SUBMIT START ===');
+
     const formData = new FormData(e.target);
+    const imagesFromDisplay = getImagesFromDisplay('artist');
+
+    console.log('Images from display:', imagesFromDisplay);
+
     const artistData = {
         name: formData.get('name'),
         bio: formData.get('bio'),
         website: formData.get('website') || null,
         id: formData.get('id') || Date.now().toString(),
-        images: getImagesFromDisplay('artist')
+        images: imagesFromDisplay
     };
 
+    console.log('Final artist data:', artistData);
+
     try {
+        console.log('Calling saveArtist...');
         // Save artist via GitHub API
         const success = await saveArtist(artistData);
+        console.log('saveArtist result:', success);
 
         if (success) {
+            console.log('SUCCESS: Artist saved successfully!');
             // Close modal and refresh list
             closeModal();
             loadArtists();
             showMessage('Artist saved successfully!', 'success', document.getElementById('artists-tab'));
         } else {
+            console.log('FAILURE: Failed to save artist');
             showMessage('Failed to save artist. Please try again.', 'error', document.getElementById('artists-tab'));
         }
     } catch (error) {
@@ -750,35 +781,50 @@ async function handleArtistFormSubmit(e) {
 
 // Save artist data to GitHub
 async function saveArtist(newArtist) {
+    console.log('=== saveArtist START ===');
     try {
+        console.log('Fetching current artists.json...');
         // Get current artists data
         const response = await fetch('assets/data/artists.json');
         const data = await response.json();
         const artists = data.artists || [];
 
+        console.log('Current artists count:', artists.length);
+        console.log('New artist data:', newArtist);
+
         // Check if we're updating or creating
         const existingIndex = artists.findIndex(artist => artist.id === newArtist.id);
+        console.log('Existing artist index:', existingIndex);
 
         if (existingIndex >= 0) {
             // Update existing artist
+            console.log('Updating existing artist');
             artists[existingIndex] = { ...artists[existingIndex], ...newArtist };
         } else {
             // Add new artist
+            console.log('Adding new artist');
             artists.push(newArtist);
         }
 
         // Update the data
         const updatedData = { ...data, artists: artists };
         const jsonContent = JSON.stringify(updatedData, null, 2);
+        console.log('JSON content length:', jsonContent.length);
 
+        console.log('Getting file SHA...');
         // Get current SHA of the file
         const fileContent = await window.githubApi.getFileContent('assets/data/artists.json');
+        console.log('File content result:', fileContent);
+
         const fileSha = fileContent.success ? fileContent.sha : null;
+        console.log('File SHA:', fileSha);
 
         // Commit message
         const action = existingIndex >= 0 ? 'Updated' : 'Added';
         const commitMessage = `Admin: ${action} artist - ${newArtist.name}`;
+        console.log('Commit message:', commitMessage);
 
+        console.log('Calling GitHub API createOrUpdateFile...');
         // Save to GitHub
         const result = await window.githubApi.createOrUpdateFile(
             'assets/data/artists.json',
@@ -787,10 +833,15 @@ async function saveArtist(newArtist) {
             fileSha
         );
 
+        console.log('GitHub API result:', result);
+        console.log('=== saveArtist END ===');
+
         return result.success;
 
     } catch (error) {
         console.error('Error in saveArtist:', error);
+        console.error('Error stack:', error.stack);
+        console.log('=== saveArtist ERROR END ===');
         return false;
     }
 }
