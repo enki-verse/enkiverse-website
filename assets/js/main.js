@@ -527,8 +527,32 @@ function initParticleBackground() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             for (let i = 0; i < particlesArray.length; i++) {
                 particlesArray[i].update();
-                particlesArray[i].draw();
             }
+
+            // Collision detection and merging
+            for (let i = 0; i < particlesArray.length; i++) {
+                for (let j = i + 1; j < particlesArray.length; j++) {
+                    let dx = particlesArray[i].x - particlesArray[j].x;
+                    let dy = particlesArray[i].y - particlesArray[j].y;
+                    let distance = Math.sqrt(dx * dx + dy * dy);
+                    let minDistance = particlesArray[i].size + particlesArray[j].size;
+
+                    if (distance < minDistance) {
+                        // merge smaller into larger
+                        let larger = particlesArray[i].size >= particlesArray[j].size ? i : j;
+                        let smaller = particlesArray[i].size >= particlesArray[j].size ? j : i;
+
+                        // Area add approximation
+                        particlesArray[larger].size = Math.sqrt(particlesArray[larger].size**2 + particlesArray[j].size**2);
+                        particlesArray.splice(smaller, 1);
+                        j--; // adjust loop
+                    }
+                }
+            }
+
+            // Draw all particles
+            particlesArray.forEach(particle => particle.draw());
+
             animationId = requestAnimationFrame(animate);
         } else {
             animationId = null;
