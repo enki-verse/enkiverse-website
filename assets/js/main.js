@@ -435,7 +435,7 @@ function initParticleBackground() {
     let particlesArray = [];
     let isVisible = true;
 
-    const colors = ['#00f5ff', '#ffd700', '#ffffff', '#1a0b3d'];
+    const colors = ['#ffffff'];
 
     class Particle {
         constructor(x, y, directionX, directionY, size, color) {
@@ -544,13 +544,15 @@ function initParticleBackground() {
 
                         // Area add approximation
                         particlesArray[larger].size = Math.sqrt(particlesArray[larger].size**2 + particlesArray[j].size**2);
+                        particlesArray[larger].size = Math.min(particlesArray[larger].size, 60); // cap size
                         particlesArray.splice(smaller, 1);
                         j--; // adjust loop
                     }
                 }
             }
 
-            // Draw all particles
+            // Draw all particles with difference blend mode for visibility
+            ctx.globalCompositeOperation = 'difference';
             particlesArray.forEach(particle => particle.draw());
 
             animationId = requestAnimationFrame(animate);
