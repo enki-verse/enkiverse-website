@@ -21,8 +21,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         secondTitle: 'Community',
                         secondLinks: [
                             ['community.html', 'Vision & Land Project'],
-                            ['contact.html', 'Contact'],
-                            ['https://github.com/enki-verse/enkiverse-website', 'GitHub']
+                            ['contact.html', 'Contact']
                         ],
                         thirdTitle: '',
                         thirdLinks: []
@@ -56,8 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         secondTitle: 'Community',
                         secondLinks: [
                             ['events.html', 'Events'],
-                            ['community.html', 'Community'],
-                            ['https://github.com/enki-verse/enkiverse-website', 'GitHub']
+                            ['community.html', 'Community']
                         ],
                         thirdTitle: '',
                         thirdLinks: []
@@ -73,8 +71,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         secondTitle: 'Community',
                         secondLinks: [
                             ['events.html', 'Events'],
-                            ['community.html', 'Community'],
-                            ['https://github.com/enki-verse/enkiverse-website', 'GitHub']
+                            ['community.html', 'Community']
                         ],
                         thirdTitle: '',
                         thirdLinks: []
@@ -116,10 +113,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             ['about.html', 'About Us'],
                             ['community.html', 'Community']
                         ],
-                        secondTitle: 'Follow',
-                        secondLinks: [
-                            ['https://github.com/enki-verse/enkiverse-website', 'GitHub']
-                        ],
+                        secondTitle: '',
+                        secondLinks: [],
                         thirdTitle: '',
                         thirdLinks: []
                     }
