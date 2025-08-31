@@ -333,13 +333,23 @@ p {
 
 /* Hero Section */
 .hero {
-  position: relative;
-  padding: 6rem 0 4rem;
-  text-align: center;
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  overflow: hidden;
+   position: relative;
+   padding: 6rem 0 4rem;
+   text-align: center;
+   min-height: 100vh;
+   display: flex;
+   align-items: center;
+   overflow: hidden;
+}
+
+#hero-canvas {
+   position: absolute;
+   top: 0;
+   left: 0;
+   width: 100%;
+   height: 100%;
+   z-index: 1;
+   pointer-events: none;
 }
 
 .hero::before {
@@ -368,21 +378,44 @@ p {
 }
 
 .hero-logo {
-  max-width: 300px;
-  height: auto;
-  margin: 2rem auto;
-  opacity: 0;
-  animation: float 3s ease-in-out infinite, fadeInUp 1s ease-out 0.5s forwards;
+   max-width: 300px;
+   height: auto;
+   margin: 2rem auto;
+   opacity: 0;
+   animation: floatEnhanced 4s ease-in-out infinite, fadeInUp 1s ease-out 0.5s forwards;
+   transform-origin: center center;
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+   0%, 100% { transform: translateY(0); }
+   50% { transform: translateY(-10px); }
+}
+
+@keyframes floatEnhanced {
+   0%, 100% { transform: translateY(0) rotate(0deg); }
+   25% { transform: translateY(-5px) rotate(1deg); }
+   50% { transform: translateY(-10px) rotate(0deg); }
+   75% { transform: translateY(-5px) rotate(-1deg); }
 }
 
 @keyframes fadeInUp {
-  0% { opacity: 0; transform: translateY(20px); }
-  100% { opacity: 1; transform: translateY(0); }
+   0% { opacity: 0; transform: translateY(20px); }
+   100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInLeft {
+   0% { opacity: 0; transform: translateX(-50px); }
+   100% { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fadeInRight {
+   0% { opacity: 0; transform: translateX(50px); }
+   100% { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fadeInUpValue {
+   0% { opacity: 0; transform: translateY(30px); }
+   100% { opacity: 1; transform: translateY(0); }
 }
 
 .hero-subtitle {
@@ -404,15 +437,28 @@ p {
 }
 
 .core-values .value {
-  padding: 1rem 2rem;
-  margin: 1rem;
-  border-radius: 25px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
-  font-weight: 500;
-  font-size: 1.1rem;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  transition: box-shadow 0.3s ease;
+   padding: 1rem 2rem;
+   margin: 1rem;
+   border-radius: 25px;
+   background: rgba(255, 255, 255, 0.1);
+   color: #ffffff;
+   font-weight: 500;
+   font-size: 1.1rem;
+   border: 2px solid rgba(255, 255, 255, 0.3);
+   transition: box-shadow 0.3s ease;
+   opacity: 0;
+}
+
+.value.freedom {
+   animation: fadeInLeft 1.2s ease-out 1.7s forwards;
+}
+
+.value.fertility {
+   animation: fadeInRight 1.2s ease-out 2.3s forwards;
+}
+
+.value.creativity {
+   animation: fadeInUpValue 1.2s ease-out 2.9s forwards;
 }
 
 .core-values .value:hover {

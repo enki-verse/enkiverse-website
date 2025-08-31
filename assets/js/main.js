@@ -17,6 +17,18 @@ function initializeSite() {
 
     // Scroll effects
     setupScrollEffects();
+
+    // Particle background
+    initParticleBackground();
+
+    // Typewriter effect
+    initTypewriterEffect();
+
+    // Parallax effect
+    initParallaxEffects();
+
+    // Magnetic button
+    initMagneticButton();
 }
 
 function setupMobileNavigation() {
@@ -411,4 +423,285 @@ function getCurrentPath() {
 
 function isHomePage() {
     return getCurrentPath() === '/' || getCurrentPath().endsWith('index.html');
+}
+// Canvas particle background
+function initParticleBackground() {
+    const canvas = document.getElementById('hero-canvas');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    let animationId;
+    let mouse = { x: undefined, y: undefined };
+    let particlesArray = [];
+
+    const colors = ['#00f5ff', '#ffd700', '#ffffff', '#1a0b3d'];
+
+    class Particle {
+        constructor(x, y, directionX, directionY, size, color) {
+            this.x = x;
+            this.y = y;
+            this.directionX = directionX;
+            this.directionY = directionY;
+            this.size = size;
+            this.color = color;
+            this.baseSize = size;
+        }
+
+        draw() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
+
+            // Create gradient for particle
+            const gradient = ctx.createRadialGradient(
+                this.x, this.y, 0,
+                this.x, this.y, this.size
+            );
+            gradient.addColorStop(0, this.color);
+            gradient.addColorStop(1, this.color.replace(')', ', 0.5)'));
+
+            ctx.fillStyle = gradient;
+            ctx.fill();
+        }
+
+        update() {
+            // Bounce off edges
+            if (this.x > canvas.width || this.x < 0) {
+                this.directionX = -this.directionX;
+            }
+            if (this.y > canvas.height || this.y < 0) {
+                this.directionY = -this.directionY;
+            }
+
+            this.x += this.directionX;
+            this.y += this.directionY;
+
+            // Interactive behavior with mouse
+            if (mouse.x !== undefined && mouse.y !== undefined) {
+                let dx = mouse.x - this.x;
+                let dy = mouse.y - this.y;
+                let distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < canvas.airRadius) {
+                    if (distance < canvas.popRadius) {
+                        if (this.size >= 0) {
+                            this.size -= 0.5;
+                        } else {
+                            this.size = 0;
+                        }
+                    } else {
+                        if (this.size < this.baseSize) {
+                            this.size += 0.1;
+                        }
+                    }
+                } else if (this.size < this.baseSize) {
+                    this.size += 0.1;
+                }
+
+                if (distance < canvas.airRadius) {
+                    this.x -= dx * 0.01;
+                    this.y -= dy * 0.01;
+                }
+            }
+        }
+    }
+
+    function init() {
+        particlesArray = [];
+        let numberOfParticles = (canvas.width * canvas.height) / 9000;
+
+        for (let i = 0; i < numberOfParticles; i++) {
+            let size = (Math.random() * 5) + 2;
+            let x = (Math.random() * (canvas.width - size * 2)) + size;
+            let y = (Math.random() * (canvas.height - size * 2)) + size;
+            let directionX = (Math.random() * 2) - 1;
+            let directionY = (Math.random() * 2) - 1;
+            let color = colors[Math.floor(Math.random() * colors.length)];
+
+            particlesArray.push(new Particle(x, y, directionX, directionY, size, color));
+        }
+    }
+
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < particlesArray.length; i++) {
+            particlesArray[i].update();
+            particlesArray[i].draw();
+        }
+        animationId = requestAnimationFrame(animate);
+    }
+
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        canvas.airRadius = canvas.width / 90;
+        canvas.popRadius = canvas.width / 25;
+        init();
+    }
+
+    // Mouse event handlers
+    function trackMousePosition(e) {
+        mouse.x = e.x;
+        mouse.y = e.y;
+    }
+
+    function resetMouse() {
+        mouse.x = undefined;
+        mouse.y = undefined;
+    }
+
+    resizeCanvas();
+    animate();
+
+    // Event listeners
+    window.addEventListener('mousemove', trackMousePosition);
+    window.addEventListener('mouseout', resetMouse);
+    window.addEventListener('resize', resizeCanvas);
+
+    // Store animation ID for cleanup if needed
+    canvas.animationId = animationId;
+}
+// Typewriter effect for main heading
+function initTypewriterEffect() {
+    const heading = document.querySelector('.hero h1');
+    if (!heading) return;
+
+    const text = heading.textContent;
+    heading.textContent = '';
+    heading.style.borderRight = '2px solid #00f5ff';
+    heading.style.whiteSpace = 'nowrap';
+
+    let i = 0;
+    const typingSpeed = 100; // milliseconds
+    const cursorBlinkSpeed = 500;
+
+    let cursorVisible = true;
+    let cursorInterval;
+
+    function blinkCursor() {
+        cursorVisible = !cursorVisible;
+        heading.style.borderColor = cursorVisible ? '#00f5ff' : 'transparent';
+    }
+
+    function typeWriter() {
+        if (i < text.length) {
+            heading.textContent += text.charAt(i);
+            i++;
+            setTimeout(typeWriter, typingSpeed);
+        } else {
+            // Typing complete, start blinking cursor
+            cursorInterval = setInterval(blinkCursor, cursorBlinkSpeed);
+
+            // Stop blinking after a few seconds
+            setTimeout(() => {
+                clearInterval(cursorInterval);
+                heading.style.borderColor = 'transparent';
+            }, 3000);
+        }
+    }
+
+    // Start typing after a brief delay
+    setTimeout(typeWriter, 1000);
+}
+// Parallax scrolling effects for hero
+function initParallaxEffects() {
+    const hero = document.querySelector('.hero');
+    const heroContent = document.querySelector('.hero-content');
+    const canvas = document.getElementById('hero-canvas');
+    const heroLogo = document.querySelector('.hero-logo');
+
+    if (!hero || !heroContent) return;
+
+    let ticking = false;
+
+    function updateParallax(scrollY) {
+        const parallaxFactor = 0.5;
+        const scaleFactor = 1 - scrollY * 0.001;
+
+        // Parallax transform for content
+        const translateY = scrollY * parallaxFactor;
+
+        heroContent.style.transform = `translateY(${translateY}px) scale(${Math.max(scaleFactor, 0.8)})`;
+
+        // If canvas exists, also parallax it slightly less
+        if (canvas) {
+            canvas.style.transform = `translateY(${scrollY * 0.2}px)`;
+        }
+
+        // Parallax for logo with opposite direction for floating effect
+        if (heroLogo) {
+            heroLogo.style.transform += ` translateY(${-scrollY * 0.1}px)`;
+        }
+
+        ticking = false;
+    }
+
+    function onScroll() {
+        if (!ticking) {
+            requestAnimationFrame(() => {
+                updateParallax(window.scrollY);
+                ticking = true;
+            });
+        }
+        ticking = true;
+    }
+
+    // Throttle scroll events
+    window.addEventListener('scroll', onScroll, { passive: true });
+
+    // Initial call
+    updateParallax(0);
+}
+// Magnetic hover effect for CTA button
+function initMagneticButton() {
+    const button = document.querySelector('.cta-button');
+    if (!button) return;
+
+    const magneticStrength = 0.3;
+    let mouseX = 0;
+    let mouseY = 0;
+    let isHovered = false;
+
+    function updateButtonPosition() {
+        if (!isHovered) return;
+
+        const rect = button.getBoundingClientRect();
+        const buttonCenterX = rect.left + rect.width / 2;
+        const buttonCenterY = rect.top + rect.height / 2;
+
+        const deltaX = mouseX - buttonCenterX;
+        const deltaY = mouseY - buttonCenterY;
+
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        const maxDistance = 100; // pixels
+
+        let attractX = 0;
+        let attractY = 0;
+
+        if (distance < maxDistance) {
+            const strength = (maxDistance - distance) / maxDistance * magneticStrength;
+            attractX = deltaX * strength;
+            attractY = deltaY * strength;
+        }
+
+        button.style.transform = `translate(${attractX}px, ${attractY}px)`;
+    }
+
+    function mouseEnter() {
+        isHovered = true;
+    }
+
+    function mouseLeave() {
+        isHovered = false;
+        button.style.transform = 'translate(0px, 0px)';
+    }
+
+    function mouseMove(e) {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+        updateButtonPosition();
+    }
+
+    button.addEventListener('mouseenter', mouseEnter);
+    button.addEventListener('mouseleave', mouseLeave);
+    document.addEventListener('mousemove', mouseMove);
 }
