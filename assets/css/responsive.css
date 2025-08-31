@@ -28,6 +28,12 @@
     transform: rotate(-45deg) translate(7px, -6px);
 }
 
+/* Focus for hamburger */
+.nav-toggle:focus {
+    outline: 2px solid #ffd700;
+    border-radius: 5px;
+}
+
 /* Mobile Navigation */
 @media (max-width: 768px) {
     .nav-toggle {

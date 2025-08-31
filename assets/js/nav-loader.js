@@ -40,6 +40,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 const dropdownLi = document.querySelector('.dropdown');
 
                 if (dropdownToggle && dropdownMenu) {
+                    // Set initial aria-expanded
+                    dropdownToggle.setAttribute('aria-expanded', 'false');
+
                     // For mobile: click to toggle
                     dropdownToggle.addEventListener('click', function(e) {
                         if (window.innerWidth <= 768) {
@@ -54,11 +57,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     dropdownLi.addEventListener('mouseenter', function() {
                         if (window.innerWidth > 768) {
                             dropdownLi.classList.add('open');
+                            dropdownToggle.setAttribute('aria-expanded', 'true');
                         }
                     });
                     dropdownLi.addEventListener('mouseleave', function() {
                         if (window.innerWidth > 768) {
                             dropdownLi.classList.remove('open');
+                            dropdownToggle.setAttribute('aria-expanded', 'false');
                         }
                     });
                 }
