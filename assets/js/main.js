@@ -542,9 +542,9 @@ function initParticleBackground() {
                         let larger = particlesArray[i].size >= particlesArray[j].size ? i : j;
                         let smaller = particlesArray[i].size >= particlesArray[j].size ? j : i;
 
-                        // Area add approximation
-                        particlesArray[larger].size = Math.sqrt(particlesArray[larger].size**2 + particlesArray[j].size**2);
-                        particlesArray[larger].size = Math.min(particlesArray[larger].size, 60); // cap size
+                        // Add sizes to make noticeably bigger
+                        particlesArray[larger].size += particlesArray[j].size;
+                        particlesArray[larger].size = Math.min(particlesArray[larger].size, 100); // cap size higher
                         particlesArray.splice(smaller, 1);
                         j--; // adjust loop
                     }
