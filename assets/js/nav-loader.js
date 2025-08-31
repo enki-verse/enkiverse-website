@@ -17,12 +17,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 });
 
-                // Also check admin link
-                const adminLink = document.getElementById('admin-link');
-                if (adminLink && adminLink.getAttribute('href') === currentPath) {
-                    adminLink.classList.add('active');
-                }
-
                 // Hamburger menu toggle
                 const navToggle = document.getElementById('nav-toggle');
                 const navMenu = document.querySelector('.nav-menu');
