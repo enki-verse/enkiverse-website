@@ -433,6 +433,7 @@ function initParticleBackground() {
     let animationId;
     let mouse = { x: undefined, y: undefined };
     let particlesArray = [];
+    let isVisible = true;
 
     const colors = ['#00f5ff', '#ffd700', '#ffffff', '#1a0b3d'];
 
@@ -507,7 +508,7 @@ function initParticleBackground() {
 
     function init() {
         particlesArray = [];
-        let numberOfParticles = (canvas.width * canvas.height) / 9000;
+        let numberOfParticles = Math.floor((canvas.width * canvas.height) / 12000);
 
         for (let i = 0; i < numberOfParticles; i++) {
             let size = (Math.random() * 5) + 2;
@@ -522,12 +523,16 @@ function initParticleBackground() {
     }
 
     function animate() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        for (let i = 0; i < particlesArray.length; i++) {
-            particlesArray[i].update();
-            particlesArray[i].draw();
+        if (isVisible) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < particlesArray.length; i++) {
+                particlesArray[i].update();
+                particlesArray[i].draw();
+            }
+            animationId = requestAnimationFrame(animate);
+        } else {
+            animationId = null;
         }
-        animationId = requestAnimationFrame(animate);
     }
 
     function resizeCanvas() {
@@ -535,6 +540,7 @@ function initParticleBackground() {
         canvas.height = window.innerHeight;
         canvas.airRadius = canvas.width / 90;
         canvas.popRadius = canvas.width / 25;
+        cancelAnimationFrame(animationId);
         init();
     }
 
@@ -556,6 +562,14 @@ function initParticleBackground() {
     window.addEventListener('mousemove', trackMousePosition);
     window.addEventListener('mouseout', resetMouse);
     window.addEventListener('resize', resizeCanvas);
+
+    // Handle visibility change to pause/resume animation
+    document.addEventListener('visibilitychange', () => {
+        isVisible = !document.hidden;
+        if (isVisible && !animationId) {
+            animate();
+        }
+    });
 
     // Store animation ID for cleanup if needed
     canvas.animationId = animationId;
