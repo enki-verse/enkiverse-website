@@ -253,3 +253,188 @@ main {
     padding: 0 3rem;
   }
 }
+
+/* Section Base Styles */
+section {
+  padding: 4rem 0;
+}
+
+h2, h3 {
+  margin-bottom: 2rem;
+}
+
+/* Hero Section */
+.hero {
+  padding: 8rem 0 4rem;
+  text-align: center;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+}
+
+.hero-content {
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.hero-logo {
+  max-width: 300px;
+  height: auto;
+  margin: 2rem auto;
+}
+
+.hero-subtitle {
+  font-size: 1.2rem;
+  margin: 1rem 0 2rem;
+  line-height: 1.6;
+}
+
+.core-values {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.core-values .value {
+  padding: 0.75rem 1.5rem;
+  border-radius: 25px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  font-weight: 500;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.cta-button {
+  display: inline-block;
+  padding: 1rem 2rem;
+  background: var(--gradient-primary);
+  color: #ffffff;
+  text-decoration: none;
+  border-radius: 50px;
+  font-weight: 600;
+  margin-top: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.cta-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.cta-button:hover::before {
+  left: 100%;
+}
+
+.cta-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(26, 11, 59, 0.4);
+}
+
+/* Mission Section */
+.mission {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.mission-points {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.mission-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 2rem;
+  text-align: center;
+}
+
+/* Featured Artist */
+.artist-spotlight {
+  display: flex;
+  align-items: center;
+  gap: 3rem;
+  margin-top: 2rem;
+}
+
+.artist-image img {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.artist-info {
+  flex: 1;
+}
+
+.artist-link {
+  display: inline-block;
+  margin-top: 1rem;
+  color: var(--accent-cyan);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.artist-link:hover {
+  color: #ffffff;
+}
+
+/* Signup Form */
+.signup-form .form-group {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+  max-width: 500px;
+}
+
+.signup-form input {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: #ffffff;
+  font-family: inherit;
+}
+
+.signup-form input::placeholder {
+  color: #cccccc;
+}
+
+.signup-form button {
+  padding: 0.75rem 1.5rem;
+  background: var(--accent-cyan);
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.signup-form button:hover {
+  background: #00f5ffaa;
+}
+
+/* Page Hero */
+.page-hero {
+  text-align: center;
+  padding: 6rem 0 4rem;
+}
+
+/* Additional Layout */
+.join-community {
+  text-align: center;
+}
